@@ -40,10 +40,13 @@ Train a single 410M transformer, checkpoint frequently, and at each checkpoint c
 
 ### Training setup
 
-- Architecture: GPT-NeoX 410M (same as merge-barriers run-002)
+- Architecture: GPT-NeoX 410M (same scale as merge-barriers run-002)
+- Corpus: **SlimPajama** or **RedPajama-v2** (standard pretraining mix approximating production models: ~70% web, ~10% code, ~5% academic, ~5% books, ~5% Wikipedia, ~5% misc). NOT the structured-data-heavy corpus from merge-barriers experiments. Ensures findings generalize to how production models develop.
+- Tokenizer: standard BPE (GPT-NeoX default or similar)
 - Checkpoints: every 50 steps for first 2000, every 200 steps to 20000
 - Probe data: fixed set of texts covering all behavior types (structured data, code, prose, brackets, repeated tokens)
-- Two models: one with merge barriers, one without (tests whether tokenizer changes the developmental sequence)
+- **Baseline** (primary): standard tokenizer, standard corpus. The "normal" developmental atlas.
+- **Comparison** (second run): merge-barrier tokenizer, same corpus. Tests whether the tokenizer changes the developmental SEQUENCE, not just the outcome.
 
 ### Output
 
@@ -82,8 +85,9 @@ Estimated cost: ~$5-10 (one 410M training run on a 4090, ~2 hours, plus probe ev
 
 ## Infrastructure
 
-Same as merge-barriers experiments:
-- Training: `train_model.py` from structok repo
+- Training: adapted `train_model.py` from structok repo (frequent checkpointing mode)
 - Hardware: RTX 4090 or A100 on Vast.ai
-- Data: same 4.5GB corpus (FineWeb + code + JSON + GCF)
-- Tokenizers: structok-64k.json and standard-64k.json
+- Data: SlimPajama or RedPajama-v2 (~5GB sample, standard pretraining distribution)
+- Tokenizer (baseline): standard BPE 64K vocab (no barriers)
+- Tokenizer (comparison): structok-64k.json (merge barriers)
+- Probes: custom multi-behavior evaluation script (new, to be written)

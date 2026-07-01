@@ -1,0 +1,17 @@
+GCF profile=generic
+## orders [15]{orderId,customer,email,status,total,items}
+ORD-00001|Alice Chen|alice@example.com|shipped|249.99|3
+ORD-00002|Bob Smith|bob@example.com|pending|89.50|1
+ORD-00003|Carol Davis|carol@company.org|delivered|512.00|5
+ORD-00004|David Park|david.park@mail.com|processing|127.33|2
+ORD-00005|Eva Johansson|eva.j@nordic.se|shipped|331.20|4
+ORD-00006|Frank Miller|frank@startup.io|cancelled|45.00|1
+ORD-00007|Grace Lee|grace.lee@corp.com|shipped|890.00|7
+ORD-00008|Henry Wilson|henry@example.com|pending|62.99|1
+ORD-00009|Irene Taylor|irene.t@bigco.com|delivered|445.50|3
+ORD-00010|Jack Brown|jack.b@freelance.dev|processing|199.99|2
+ORD-00011|Karen White|karen@example.com|shipped|78.25|1
+ORD-00012|Leo Martinez|leo.m@agency.co|pending|1250.00|12
+ORD-00013|Maria Santos|maria@example.com|delivered|55.00|1
+ORD-00014|Nathan Kim|nathan.kim@tech.io|shipped|329.99|3
+ORD-00015|Olivia Brown|olivia@startup.com|processing|410.75|4

@@ -1,0 +1,29 @@
+func processOrders(ctx context.Context, db *sql.DB, orders []Order) error {
+    tx, err := db.BeginTx(ctx, nil)
+    if err != nil {
+        return fmt.Errorf("begin transaction: %w", err)
+    }
+    defer tx.Rollback()
+
+    for i, order := range orders {
+        if order.Status == "pending" {
+            result, err := tx.ExecContext(ctx,
+                "UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3",
+                "processing", time.Now(), order.ID)
+            if err != nil {
+                return fmt.Errorf("update order %d: %w", order.ID, err)
+            }
+            rows, _ := result.RowsAffected()
+            if rows == 0 {
+                log.Printf("order %d not found (index %d)", order.ID, i)
+                continue
+            }
+            for _, item := range order.Items {
+                if item.Quantity > item.Stock {
+                    return fmt.Errorf("insufficient stock for item %s", item.SKU)
+                }
+            }
+        }
+    }
+    return tx.Commit()
+}
