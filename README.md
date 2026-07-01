@@ -48,12 +48,28 @@ Train a single 410M transformer, checkpoint frequently, and at each checkpoint c
 - **Baseline** (primary): standard tokenizer, standard corpus. The "normal" developmental atlas.
 - **Comparison** (second run): merge-barrier tokenizer, same corpus. Tests whether the tokenizer changes the developmental SEQUENCE, not just the outcome.
 
-### Output
+### Polysemanticity (heads do multiple things)
+
+Heads are not single-function units. A head might be 60% positional on prose but 80% delimiter on structured data. Forcing a single label is a simplification that hides this.
+
+**Approach: score vectors, not labels.**
 
 For each checkpoint, for each head (24 layers x 16 heads = 384):
-- Score on each of 8 behavior types
-- Classification into dominant type
-- Confidence (how specialized vs generalist)
+- Full score vector across all 8 behavior types (continuous, not classified)
+- **Specialization index**: how concentrated the score vector is (high = specialist, low = generalist). Computed as max(scores) / sum(scores). A head at [0.8, 0.1, 0.05, 0.05, 0, 0, 0, 0] has high specialization. A head at [0.15, 0.14, 0.13, 0.12, 0.12, 0.12, 0.11, 0.11] is a generalist.
+- **Top-2 behaviors** with confidence: "primarily delimiter (0.6), secondarily positional (0.25)" is more honest than "delimiter head"
+- **Context-conditional scores**: measured separately on each probe text. A head might be positional on prose but delimiter on JSON. The stranding experiment already showed this (same head, different behavior on different input).
+
+**Key developmental questions this enables:**
+- Do heads START as generalists and BECOME specialists over training?
+- Does specialization index increase monotonically, or do heads oscillate?
+- When a head "commits" to a specialization, is it irreversible?
+- Do polysemantic heads occupy specific layers (early = generalist, late = specialist)?
+
+**Future extensions (not v1):**
+- Sparse Autoencoders (SAEs) on head outputs to decompose features within a single head
+- QK/OV circuit decomposition into independent subspace directions (Elhage et al., 2022)
+- Causal scrubbing: vary input features and measure which output dimensions respond
 
 ### Visualizations
 
