@@ -28,6 +28,7 @@ import json
 import mmap
 import os
 import struct
+import threading
 import time
 from pathlib import Path
 
@@ -161,6 +162,37 @@ def main():
     print("  R2 prefix: %s" % r2_prefix)
     print()
 
+    # Background R2 uploader: uploads checkpoints in a separate thread
+    # so training isn't blocked. If instance dies, whatever uploaded is safe.
+    upload_queue = []
+    upload_lock = threading.Lock()
+    upload_results = {"uploaded": 0, "failed": 0}
+
+    def background_uploader():
+        while True:
+            item = None
+            with upload_lock:
+                if upload_queue:
+                    item = upload_queue.pop(0)
+            if item is None:
+                time.sleep(1)
+                if item is None and not training_active[0]:
+                    break
+                continue
+            local_path, r2_key = item
+            if upload_to_r2_with_retry(local_path, r2_key):
+                upload_results["uploaded"] += 1
+            else:
+                upload_results["failed"] += 1
+
+    training_active = [True]
+    uploader_thread = threading.Thread(target=background_uploader, daemon=True)
+    uploader_thread.start()
+
+    def queue_upload(local_path, r2_key):
+        with upload_lock:
+            upload_queue.append((str(local_path), r2_key))
+
     # Save step-0 checkpoint (random initialization, before any training)
     step0_path = checkpoint_dir / "step-00000.pt"
     torch.save({
@@ -169,6 +201,7 @@ def main():
         "loss": float("nan"),
     }, step0_path)
     print("  [step 0 (random init) saved: %.0f MB]" % (os.path.getsize(step0_path) / 1e6))
+    queue_upload(step0_path, "%s/checkpoints/step-00000.pt" % r2_prefix)
 
     # Load data (memory-mapped)
     data_file = open(args.data, 'rb')
@@ -225,7 +258,11 @@ def main():
             }, cp_path)
 
             cp_size = os.path.getsize(cp_path) / 1e6
-            print("    [checkpoint saved: step %d, %.0f MB]" % (step, cp_size))
+            print("    [checkpoint saved: step %d, %.0f MB, queued for R2]" % (step, cp_size))
+
+            # Queue for background R2 upload
+            r2_key = "%s/checkpoints/step-%05d.pt" % (r2_prefix, step)
+            queue_upload(cp_path, r2_key)
 
             log_entries.append({
                 "step": step,
@@ -249,15 +286,67 @@ def main():
     total_size = sum(f.stat().st_size for f in checkpoint_dir.glob("*.pt"))
     print("Total checkpoint size: %.1f GB" % (total_size / 1e9))
 
-    # Upload to R2
+    # Wait for background uploads to finish
+    training_active[0] = False
+    print("\nWaiting for background R2 uploads to finish...")
+    with upload_lock:
+        remaining = len(upload_queue)
+    while remaining > 0:
+        print("  %d uploads remaining..." % remaining)
+        time.sleep(10)
+        with upload_lock:
+            remaining = len(upload_queue)
+    uploader_thread.join(timeout=60)
+
+    print("Background uploads: %d uploaded, %d failed" % (
+        upload_results["uploaded"], upload_results["failed"]))
+
+    # Verify and retry any that the background thread missed
     if not args.skip_upload:
-        success = upload_all_to_r2(output_dir, r2_prefix)
-        if success:
-            print("\nAll checkpoints verified on R2. Safe to destroy instance.")
+        print("\nVerifying all checkpoints on R2...")
+        s3 = get_r2_client()
+        missing = []
+        for cp in sorted(checkpoint_dir.glob("step-*.pt")):
+            r2_key = "%s/checkpoints/%s" % (r2_prefix, cp.name)
+            try:
+                resp = s3.head_object(Bucket=R2_BUCKET, Key=r2_key)
+                local_size = os.path.getsize(cp)
+                if resp["ContentLength"] != local_size:
+                    missing.append(cp)
+            except Exception:
+                missing.append(cp)
+
+        if missing:
+            print("  %d checkpoints missing or corrupted on R2. Re-uploading..." % len(missing))
+            for cp in missing:
+                r2_key = "%s/checkpoints/%s" % (r2_prefix, cp.name)
+                print("  %s..." % cp.name, end=" ", flush=True)
+                if upload_to_r2_with_retry(cp, r2_key):
+                    print("OK")
+                else:
+                    print("FAILED")
+
+        # Upload training log
+        log_path = output_dir / "training_log.json"
+        upload_to_r2_with_retry(log_path, "%s/training_log.json" % r2_prefix)
+
+        # Final count
+        verified = 0
+        for cp in sorted(checkpoint_dir.glob("step-*.pt")):
+            r2_key = "%s/checkpoints/%s" % (r2_prefix, cp.name)
+            try:
+                s3.head_object(Bucket=R2_BUCKET, Key=r2_key)
+                verified += 1
+            except Exception:
+                pass
+
+        print("\n=== %d / %d checkpoints verified on R2 ===" % (verified, checkpoints_saved))
+        if verified == checkpoints_saved:
+            print("All checkpoints safe. OK to destroy instance.")
         else:
-            print("\nSome uploads failed. DO NOT destroy instance until resolved.")
+            print("WARNING: %d checkpoints NOT on R2. DO NOT destroy instance." % (checkpoints_saved - verified))
     else:
-        print("\nSkipping R2 upload (--skip-upload). Upload manually before destroying instance.")
+        print("\nSkipping R2 upload (--skip-upload).")
 
 
 if __name__ == "__main__":
