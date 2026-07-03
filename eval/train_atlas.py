@@ -122,6 +122,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--seq-length", type=int, default=2048)
     parser.add_argument("--skip-upload", action="store_true", help="Skip R2 upload after training")
+    parser.add_argument("--resume-from", type=str, help="Path to checkpoint to resume from (or 'r2' to download latest from R2)")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -150,6 +151,38 @@ def main():
     model = GPTNeoXForCausalLM(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
 
+    # Resume from checkpoint if specified
+    start_step = 0
+    if args.resume_from:
+        resume_path = args.resume_from
+        if resume_path == "r2":
+            # Find and download latest checkpoint from R2
+            s3 = get_r2_client()
+            paginator = s3.get_paginator("list_objects_v2")
+            cp_keys = []
+            for page in paginator.paginate(Bucket=R2_BUCKET, Prefix="%s/checkpoints/" % r2_prefix):
+                for obj in page.get("Contents", []):
+                    if obj["Key"].endswith(".pt"):
+                        cp_keys.append(obj["Key"])
+            if cp_keys:
+                cp_keys.sort()
+                latest_key = cp_keys[-1]
+                resume_path = "/tmp/resume-checkpoint.pt"
+                print("Downloading latest checkpoint from R2: %s" % latest_key)
+                s3.download_file(R2_BUCKET, latest_key, resume_path)
+            else:
+                print("No checkpoints found on R2, starting from scratch")
+                resume_path = None
+
+        if resume_path:
+            print("Resuming from %s" % resume_path)
+            cp = torch.load(resume_path, map_location=device, weights_only=False)
+            model.load_state_dict(cp["model_state_dict"])
+            start_step = cp["step"]
+            print("  Resumed at step %d" % start_step)
+            if resume_path == "/tmp/resume-checkpoint.pt":
+                os.remove(resume_path)
+
     params = sum(p.numel() for p in model.parameters())
     print("=" * 60)
     print("ATTENTION HEAD ATLAS: Training (%s)" % args.run_name)
@@ -157,7 +190,7 @@ def main():
     print("  Model: GPT-NeoX 410M (%d params)" % params)
     print("  Tokenizer: %s (%d vocab)" % (args.tokenizer, vocab_size))
     print("  Data: %s" % args.data)
-    print("  Steps: %d" % args.steps)
+    print("  Steps: %d (starting from %d)" % (args.steps, start_step))
     print("  Output: %s" % output_dir)
     print("  R2 prefix: %s" % r2_prefix)
     print()
@@ -193,15 +226,16 @@ def main():
         with upload_lock:
             upload_queue.append((str(local_path), r2_key))
 
-    # Save step-0 checkpoint (random initialization, before any training)
-    step0_path = checkpoint_dir / "step-00000.pt"
-    torch.save({
-        "step": 0,
-        "model_state_dict": model.state_dict(),
-        "loss": float("nan"),
-    }, step0_path)
-    print("  [step 0 (random init) saved: %.0f MB]" % (os.path.getsize(step0_path) / 1e6))
-    queue_upload(step0_path, "%s/checkpoints/step-00000.pt" % r2_prefix)
+    # Save step-0 checkpoint only if starting fresh
+    if start_step == 0:
+        step0_path = checkpoint_dir / "step-00000.pt"
+        torch.save({
+            "step": 0,
+            "model_state_dict": model.state_dict(),
+            "loss": float("nan"),
+        }, step0_path)
+        print("  [step 0 (random init) saved: %.0f MB]" % (os.path.getsize(step0_path) / 1e6))
+        queue_upload(step0_path, "%s/checkpoints/step-00000.pt" % r2_prefix)
 
     # Load data (memory-mapped)
     data_file = open(args.data, 'rb')
@@ -214,10 +248,10 @@ def main():
     # Training loop
     model.train()
     t0 = time.time()
-    log_entries = [{"step": 0, "loss": None, "time": 0}]
-    checkpoints_saved = 1  # step 0
+    log_entries = [{"step": start_step, "loss": None, "time": 0}]
+    checkpoints_saved = 0
 
-    for step in range(1, args.steps + 1):
+    for step in range(start_step + 1, args.steps + 1):
         # Random sequence
         seq_idx = torch.randint(0, num_sequences - 1, (1,)).item()
         offset = seq_idx * args.seq_length * 2
