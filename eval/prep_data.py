@@ -46,7 +46,8 @@ def download_corpus(output_dir, target_gb=5):
 
     # Stream SlimPajama and write chunks
     ds = load_dataset(
-        "cerebras/SlimPajama-627B",
+        "HuggingFaceFW/fineweb",
+        name="sample-10BT",
         split="train",
         streaming=True,
     )

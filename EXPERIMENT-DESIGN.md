@@ -23,7 +23,7 @@ Two training runs that differ ONLY in the tokenizer:
 
 ## Corpus
 
-SlimPajama or RedPajama-v2, ~5GB sample. Standard pretraining distribution (~70% web, ~10% code, ~5% academic, ~5% books, ~5% Wikipedia). NOT the structured-data-heavy corpus from merge-barriers experiments. This ensures findings generalize to how production models develop.
+FineWeb (HuggingFaceFW/fineweb, sample-10BT split), ~5GB sample. High-quality web corpus used by modern production models. NOT the structured-data-heavy corpus from merge-barriers experiments. This ensures findings generalize to how production models develop.
 
 ## Checkpoint Schedule
 
@@ -95,7 +95,7 @@ atlas/
 
 ## Provenance
 
-- Corpus: SlimPajama (HuggingFace cerebras/SlimPajama-627B, 5GB sample)
+- Corpus: FineWeb (HuggingFace HuggingFaceFW/fineweb, sample-10BT, 5GB sample)
 - Tokenizers: standard-64k.json from merge-barriers run-002, structok-64k.json from structok repo
 - Training script: `eval/train_atlas.py`
 - Probing script: `eval/probe_heads.py`
