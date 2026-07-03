@@ -227,6 +227,88 @@ def measure_dormant(attentions, seq_len):
     return scores
 
 
+def measure_entropy(attentions, seq_len):
+    """Attention entropy per head. Low = concentrated, high = diffuse."""
+    scores = []
+    for layer_attn in attentions:
+        # layer_attn: [heads, seq, seq] - causal mask means varying lengths
+        entropy = torch.zeros(layer_attn.shape[0])
+        for q in range(1, seq_len):  # skip position 0 (attends only to itself)
+            probs = layer_attn[:, q, :q+1]  # [heads, q+1]
+            # Clamp to avoid log(0)
+            log_probs = torch.log(probs.clamp(min=1e-10))
+            entropy -= (probs * log_probs).sum(dim=-1)
+        entropy /= (seq_len - 1)
+        scores.append(entropy.tolist())
+    return scores
+
+
+def segment_at_barriers(text):
+    """Split text at barrier characters, keeping delimiters as separate segments."""
+    segments = []
+    current = []
+    for ch in text:
+        if ch in DELIMITER_CHARS:
+            if current:
+                segments.append(''.join(current))
+                current = []
+            segments.append(ch)
+        else:
+            current.append(ch)
+    if current:
+        segments.append(''.join(current))
+    return segments
+
+
+def tokenize_forced_clean(text, tokenizer):
+    """Tokenize with forced delimiter isolation using the tokenizer's own vocabulary."""
+    segments = segment_at_barriers(text)
+    all_ids = []
+    for seg in segments:
+        encoded = tokenizer.encode(seg)
+        all_ids.extend(encoded.ids)
+    return all_ids
+
+
+def measure_frustration_gap(model, text, tokenizer, device):
+    """Measure delimiter attention under normal vs forced-clean tokenization.
+    Returns per-head delta (clean - normal) and aggregate stats."""
+    # Normal tokenization
+    normal_ids = tokenizer.encode(text).ids[:1024]
+    normal_attn = get_attention(model, normal_ids, device)
+    normal_delim = measure_delimiter(normal_attn, normal_ids, tokenizer, len(normal_ids))
+
+    # Forced-clean tokenization
+    clean_ids = tokenize_forced_clean(text, tokenizer)[:1024]
+    clean_attn = get_attention(model, clean_ids, device)
+    clean_delim = measure_delimiter(clean_attn, clean_ids, tokenizer, len(clean_ids))
+
+    # Compute per-head delta
+    deltas = []
+    for layer_idx in range(len(normal_delim)):
+        layer_deltas = []
+        for head_idx in range(len(normal_delim[layer_idx])):
+            d = clean_delim[layer_idx][head_idx] - normal_delim[layer_idx][head_idx]
+            layer_deltas.append(round(d, 4))
+        deltas.append(layer_deltas)
+
+    # Flatten for stats
+    all_normal = [v for layer in normal_delim for v in layer]
+    all_clean = [v for layer in clean_delim for v in layer]
+    all_deltas = [v for layer in deltas for v in layer]
+
+    return {
+        "normal_mean": round(np.mean(all_normal), 4),
+        "clean_mean": round(np.mean(all_clean), 4),
+        "gap": round(np.mean(all_deltas), 4),
+        "min_delta": round(min(all_deltas), 4),
+        "max_delta": round(max(all_deltas), 4),
+        "heads_woke_up": sum(1 for d in all_deltas if d > 0.05),
+        "total_heads": len(all_deltas),
+        "per_layer_deltas": deltas,
+    }
+
+
 def probe_checkpoint(model, tokenizer, probe_dir, device):
     """Run all probes on all probe texts, return full head classification."""
     probes = {
@@ -240,11 +322,11 @@ def probe_checkpoint(model, tokenizer, probe_dir, device):
 
     results = {}
 
+    model = model.to(device)
     for probe_name, text in probes.items():
         token_ids = tokenizer.encode(text).ids[:1024]
         seq_len = len(token_ids)
 
-        model = model.to(device)
         attentions = get_attention(model, token_ids, device)
 
         results[probe_name] = {
@@ -256,34 +338,54 @@ def probe_checkpoint(model, tokenizer, probe_dir, device):
             "bracket": measure_bracket(attentions, token_ids, tokenizer, seq_len),
             "duplicate": measure_duplicate(attentions, token_ids, seq_len),
             "dormant": measure_dormant(attentions, seq_len),
+            "entropy": measure_entropy(attentions, seq_len),
         }
+
+    # Frustration gap: forced-clean vs normal on structured text
+    results["frustration_gap"] = measure_frustration_gap(
+        model, probes["structured"], tokenizer, device)
 
     return results
 
 
 def classify_heads(results, num_layers=24, num_heads=16):
     """Classify each head by its dominant behavior across all probes."""
+    probe_names = [p for p in results if p != "frustration_gap"]
     classifications = []
 
     for layer in range(num_layers):
         for head in range(num_heads):
             scores = {
-                "positional_prev": np.mean([results[p]["positional_prev"][layer][head] for p in results]),
-                "positional_p0": np.mean([results[p]["positional_p0"][layer][head] for p in results]),
+                "positional_prev": np.mean([results[p]["positional_prev"][layer][head] for p in probe_names]),
+                "positional_p0": np.mean([results[p]["positional_p0"][layer][head] for p in probe_names]),
                 "induction": results["induction"]["induction"][layer][head],
                 "delimiter": results["structured"]["delimiter"][layer][head],
                 "bracket": results["brackets"]["bracket"][layer][head],
                 "duplicate": results["duplicates"]["duplicate"][layer][head],
             }
 
+            # Mean entropy across probes
+            entropy = np.mean([results[p]["entropy"][layer][head] for p in probe_names])
+
+            # Specialization index: max / sum (1.0 = pure specialist, ~0.17 = uniform)
+            score_vals = list(scores.values())
+            total = sum(score_vals) + 1e-10
+            spec_index = max(score_vals) / total
+
             dominant = max(scores, key=scores.get)
-            confidence = scores[dominant] / (sum(scores.values()) + 1e-10)
+            confidence = scores[dominant] / total
+
+            # "None of the above": all scores below threshold
+            is_unclassified = max(score_vals) < 0.05
 
             classifications.append({
                 "layer": layer,
                 "head": head,
-                "dominant": dominant,
+                "dominant": "unclassified" if is_unclassified else dominant,
                 "confidence": round(confidence, 4),
+                "specialization_index": round(spec_index, 4),
+                "entropy": round(entropy, 4),
+                "unclassified": is_unclassified,
                 "scores": {k: round(v, 4) for k, v in scores.items()},
             })
 

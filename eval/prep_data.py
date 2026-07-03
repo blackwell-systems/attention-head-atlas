@@ -97,41 +97,67 @@ def download_corpus(output_dir, target_gb=5):
     return chunk_idx
 
 
-def tokenize_corpus(tokenizer_path, corpus_dir, output_path):
-    """Tokenize all chunk files and write binary."""
+def _tokenize_chunk(args):
+    """Tokenize a single chunk file. Worker function for multiprocessing."""
+    chunk_path, tokenizer_path, out_path = args
     from tokenizers import Tokenizer
-
     tok = Tokenizer.from_file(tokenizer_path)
+    text = Path(chunk_path).read_text()
+
+    # Split into ~1 MB segments to avoid tokenizer OOM on large inputs
+    segment_size = 1_000_000
+    all_ids = []
+    for i in range(0, len(text), segment_size):
+        segment = text[i:i + segment_size]
+        encoded = tok.encode(segment)
+        all_ids.extend(encoded.ids)
+
+    data = struct.pack("<%dH" % len(all_ids),
+                       *[min(tid, 65535) for tid in all_ids])
+    with open(out_path, "wb") as f:
+        f.write(data)
+    return len(all_ids)
+
+
+def tokenize_corpus(tokenizer_path, corpus_dir, output_path):
+    """Tokenize all chunk files in parallel and concatenate."""
+    from multiprocessing import Pool, cpu_count
+
     corpus_dir = Path(corpus_dir)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     chunks = sorted(corpus_dir.glob("chunk-*.txt"))
-    print("Tokenizing %d chunks with %s..." % (len(chunks), Path(tokenizer_path).name))
+    workers = min(12, cpu_count(), len(chunks))
+    print("Tokenizing %d chunks with %s using %d workers..." % (
+        len(chunks), Path(tokenizer_path).name, workers))
     t0 = time.time()
 
-    total_tokens = 0
-    with open(output_path, "wb") as out:
-        for i, chunk_path in enumerate(chunks):
-            text = chunk_path.read_text()
-            encoded = tok.encode(text)
-            token_ids = encoded.ids
+    # Tokenize each chunk to a temp file in parallel
+    tmp_dir = Path("/tmp/atlas-tok-tmp")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    work = [(str(c), tokenizer_path, str(tmp_dir / ("%s.bin" % c.stem)))
+            for c in chunks]
 
-            for tid in token_ids:
-                if tid > 65535:
-                    tid = 0  # clamp to uint16
-                out.write(struct.pack("<H", tid))
+    with Pool(workers) as pool:
+        token_counts = pool.map(_tokenize_chunk, work)
 
-            total_tokens += len(token_ids)
-
-            if (i + 1) % 5 == 0:
-                elapsed = time.time() - t0
-                print("  chunk %d/%d | %d tokens | %.0f tok/s" % (
-                    i + 1, len(chunks), total_tokens, total_tokens / elapsed))
-
+    total_tokens = sum(token_counts)
     elapsed = time.time() - t0
+    print("  Tokenized %d tokens in %.0fs (%.0f tok/s)" % (
+        total_tokens, elapsed, total_tokens / elapsed))
+
+    # Concatenate in order
+    print("  Concatenating %d chunk bins..." % len(chunks))
+    with open(output_path, "wb") as out:
+        for chunk_path in chunks:
+            tmp_path = tmp_dir / ("%s.bin" % chunk_path.stem)
+            out.write(tmp_path.read_bytes())
+            tmp_path.unlink()
+
+    tmp_dir.rmdir()
     size_gb = os.path.getsize(output_path) / 1e9
-    print("Done: %d tokens, %.1f GB, %.0fs" % (total_tokens, size_gb, elapsed))
+    print("Done: %d tokens, %.1f GB, %.0fs" % (total_tokens, size_gb, time.time() - t0))
     print("Saved to %s" % output_path)
 
 

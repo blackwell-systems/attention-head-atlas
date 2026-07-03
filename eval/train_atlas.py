@@ -128,10 +128,22 @@ def main():
     print("  Data: %d tokens, %d sequences" % (total_tokens, num_sequences))
     print()
 
+    # Save step-0 checkpoint (random initialization, before any training)
+    torch.save({
+        "step": 0,
+        "model_state_dict": model.state_dict(),
+        "loss": float("nan"),
+    }, tmp_checkpoint)
+    r2_key = "%s/checkpoints/step-00000.pt" % r2_prefix
+    if upload_to_r2(tmp_checkpoint, r2_key):
+        print("  [step 0 (init) -> R2]")
+        if not args.keep_local:
+            os.remove(tmp_checkpoint)
+
     # Training loop
     model.train()
     t0 = time.time()
-    log_entries = []
+    log_entries = [{"step": 0, "loss": None, "time": 0, "r2_uploaded": True}]
     checkpoints_saved = 0
 
     for step in range(1, args.steps + 1):
