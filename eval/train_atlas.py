@@ -4,14 +4,14 @@ Training script for the attention head atlas.
 Trains a 410M GPT-NeoX model with frequent checkpointing for developmental analysis.
 
 Checkpoint schedule:
+- Step 0 (random init, before any training)
 - Every 50 steps for first 2000 (40 checkpoints, captures emergence)
 - Every 200 steps from 2000-20000 (90 checkpoints, captures stabilization)
-- Total: 130 checkpoints
+- Total: 131 checkpoints
 
-Checkpoints are uploaded to R2 immediately after saving and deleted locally
-to keep disk usage flat (~2 GB working space).
-
-After training, run probe_heads.py in batch mode on R2 checkpoints.
+All checkpoints are saved locally during training. After training completes,
+all checkpoints are uploaded to R2 with retry logic and verification.
+Requires ~250 GB disk.
 
 Usage:
   python train_atlas.py \
@@ -19,7 +19,8 @@ Usage:
     --data /root/data/tokens.bin \
     --steps 20000 \
     --run-name baseline \
-    --r2-prefix atlas/runs/baseline
+    --r2-prefix atlas/runs/baseline \
+    --output-dir /root/runs/baseline
 """
 
 import argparse
@@ -49,15 +50,63 @@ def get_r2_client():
 R2_BUCKET = "structok-training"
 
 
-def upload_to_r2(local_path, r2_key):
-    """Upload file to R2 and return success."""
-    try:
-        s3 = get_r2_client()
-        s3.upload_file(str(local_path), R2_BUCKET, r2_key)
-        return True
-    except Exception as e:
-        print("    WARNING: R2 upload failed for %s: %s" % (r2_key, e))
-        return False
+def upload_to_r2_with_retry(local_path, r2_key, max_retries=3):
+    """Upload file to R2 with retries and verification."""
+    s3 = get_r2_client()
+    local_size = os.path.getsize(local_path)
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            s3.upload_file(str(local_path), R2_BUCKET, r2_key)
+
+            # Verify upload by checking size on R2
+            resp = s3.head_object(Bucket=R2_BUCKET, Key=r2_key)
+            r2_size = resp["ContentLength"]
+            if r2_size != local_size:
+                print("    VERIFY FAIL: %s local=%d r2=%d (attempt %d)" % (
+                    r2_key, local_size, r2_size, attempt))
+                continue
+            return True
+        except Exception as e:
+            print("    UPLOAD FAIL: %s attempt %d: %s" % (r2_key, attempt, e))
+            if attempt < max_retries:
+                time.sleep(5 * attempt)  # backoff
+
+    return False
+
+
+def upload_all_to_r2(output_dir, r2_prefix):
+    """Upload all checkpoints, training log, and probes to R2 after training."""
+    output_dir = Path(output_dir)
+    checkpoint_dir = output_dir / "checkpoints"
+
+    checkpoints = sorted(checkpoint_dir.glob("step-*.pt"))
+    print("\n=== Uploading %d checkpoints to R2 ===" % len(checkpoints))
+
+    uploaded = 0
+    failed = 0
+    for cp in checkpoints:
+        r2_key = "%s/checkpoints/%s" % (r2_prefix, cp.name)
+        size_mb = os.path.getsize(cp) / 1e6
+        print("  %s (%.0f MB)..." % (cp.name, size_mb), end=" ", flush=True)
+        if upload_to_r2_with_retry(cp, r2_key):
+            print("OK")
+            uploaded += 1
+        else:
+            print("FAILED")
+            failed += 1
+
+    # Upload training log
+    log_path = output_dir / "training_log.json"
+    if log_path.exists():
+        r2_key = "%s/training_log.json" % r2_prefix
+        upload_to_r2_with_retry(log_path, r2_key)
+        print("  training_log.json uploaded")
+
+    print("\n=== Upload complete: %d uploaded, %d failed ===" % (uploaded, failed))
+    if failed > 0:
+        print("WARNING: %d checkpoints failed to upload. Local copies preserved." % failed)
+    return failed == 0
 
 
 def main():
@@ -66,27 +115,19 @@ def main():
     parser.add_argument("--data", required=True, help="Path to pretokenized .bin file")
     parser.add_argument("--steps", type=int, default=20000)
     parser.add_argument("--run-name", default="baseline", help="Run name (baseline or comparison)")
-    parser.add_argument("--r2-prefix", default=None, help="R2 prefix for uploads (e.g. atlas/runs/baseline)")
-    parser.add_argument("--output-dir", default=None, help="Local output dir (optional, for keeping checkpoints locally)")
+    parser.add_argument("--r2-prefix", default=None, help="R2 prefix for uploads")
+    parser.add_argument("--output-dir", required=True, help="Local output directory for checkpoints")
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--seq-length", type=int, default=2048)
-    parser.add_argument("--keep-local", action="store_true", help="Keep checkpoints locally after R2 upload")
+    parser.add_argument("--skip-upload", action="store_true", help="Skip R2 upload after training")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Use a single temp checkpoint path to keep disk flat
-    tmp_checkpoint = Path("/tmp/atlas-checkpoint.pt")
-
-    # Optional local output
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
-        checkpoint_dir = output_dir / "checkpoints"
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        output_dir = Path("/tmp/atlas-output")
-        output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = Path(args.output_dir)
+    checkpoint_dir = output_dir / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     r2_prefix = args.r2_prefix or ("atlas/runs/%s" % args.run_name)
 
@@ -116,9 +157,18 @@ def main():
     print("  Tokenizer: %s (%d vocab)" % (args.tokenizer, vocab_size))
     print("  Data: %s" % args.data)
     print("  Steps: %d" % args.steps)
+    print("  Output: %s" % output_dir)
     print("  R2 prefix: %s" % r2_prefix)
-    print("  Keep local: %s" % args.keep_local)
     print()
+
+    # Save step-0 checkpoint (random initialization, before any training)
+    step0_path = checkpoint_dir / "step-00000.pt"
+    torch.save({
+        "step": 0,
+        "model_state_dict": model.state_dict(),
+        "loss": float("nan"),
+    }, step0_path)
+    print("  [step 0 (random init) saved: %.0f MB]" % (os.path.getsize(step0_path) / 1e6))
 
     # Load data (memory-mapped)
     data_file = open(args.data, 'rb')
@@ -128,23 +178,11 @@ def main():
     print("  Data: %d tokens, %d sequences" % (total_tokens, num_sequences))
     print()
 
-    # Save step-0 checkpoint (random initialization, before any training)
-    torch.save({
-        "step": 0,
-        "model_state_dict": model.state_dict(),
-        "loss": float("nan"),
-    }, tmp_checkpoint)
-    r2_key = "%s/checkpoints/step-00000.pt" % r2_prefix
-    if upload_to_r2(tmp_checkpoint, r2_key):
-        print("  [step 0 (init) -> R2]")
-        if not args.keep_local:
-            os.remove(tmp_checkpoint)
-
     # Training loop
     model.train()
     t0 = time.time()
-    log_entries = [{"step": 0, "loss": None, "time": 0, "r2_uploaded": True}]
-    checkpoints_saved = 0
+    log_entries = [{"step": 0, "loss": None, "time": 0}]
+    checkpoints_saved = 1  # step 0
 
     for step in range(1, args.steps + 1):
         # Random sequence
@@ -179,54 +217,47 @@ def main():
             should_checkpoint = True
 
         if should_checkpoint:
-            step_name = "step-%05d" % step
-
-            # Save checkpoint (model weights only, no optimizer - saves ~50% disk)
+            cp_path = checkpoint_dir / ("step-%05d.pt" % step)
             torch.save({
                 "step": step,
                 "model_state_dict": model.state_dict(),
                 "loss": loss.item(),
-            }, tmp_checkpoint)
+            }, cp_path)
 
-            cp_size = os.path.getsize(tmp_checkpoint) / 1e6
-
-            # Upload to R2
-            r2_key = "%s/checkpoints/%s.pt" % (r2_prefix, step_name)
-            uploaded = upload_to_r2(tmp_checkpoint, r2_key)
-
-            if uploaded and not args.keep_local:
-                os.remove(tmp_checkpoint)
-                print("    [step %d -> R2 (%.0f MB), deleted local]" % (step, cp_size))
-            elif args.keep_local and args.output_dir:
-                local_path = Path(args.output_dir) / "checkpoints" / ("%s.pt" % step_name)
-                os.rename(tmp_checkpoint, local_path)
-                print("    [step %d -> R2 + local (%.0f MB)]" % (step, cp_size))
-            else:
-                print("    [step %d saved (%.0f MB), R2 %s]" % (
-                    step, cp_size, "ok" if uploaded else "FAILED"))
+            cp_size = os.path.getsize(cp_path) / 1e6
+            print("    [checkpoint saved: step %d, %.0f MB]" % (step, cp_size))
 
             log_entries.append({
                 "step": step,
                 "loss": loss.item(),
                 "time": round(time.time() - t0, 1),
-                "r2_uploaded": uploaded,
             })
             checkpoints_saved += 1
 
             # Save log incrementally
-            log_path = output_dir / "training_log.json"
-            with open(log_path, "w") as f:
+            with open(output_dir / "training_log.json", "w") as f:
                 json.dump(log_entries, f)
 
     mm.close()
     data_file.close()
 
-    # Upload training log
-    log_path = output_dir / "training_log.json"
-    upload_to_r2(log_path, "%s/training_log.json" % r2_prefix)
+    elapsed = time.time() - t0
+    print("\nTraining complete. %d checkpoints saved locally in %.0f minutes." % (
+        checkpoints_saved, elapsed / 60))
 
-    print("\nTraining complete. %d checkpoints saved to R2." % checkpoints_saved)
-    print("R2 prefix: %s" % r2_prefix)
+    # Disk usage
+    total_size = sum(f.stat().st_size for f in checkpoint_dir.glob("*.pt"))
+    print("Total checkpoint size: %.1f GB" % (total_size / 1e9))
+
+    # Upload to R2
+    if not args.skip_upload:
+        success = upload_all_to_r2(output_dir, r2_prefix)
+        if success:
+            print("\nAll checkpoints verified on R2. Safe to destroy instance.")
+        else:
+            print("\nSome uploads failed. DO NOT destroy instance until resolved.")
+    else:
+        print("\nSkipping R2 upload (--skip-upload). Upload manually before destroying instance.")
 
 
 if __name__ == "__main__":
