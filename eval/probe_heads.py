@@ -31,6 +31,7 @@ Usage:
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -289,10 +290,53 @@ def classify_heads(results, num_layers=24, num_heads=16):
     return classifications
 
 
+def get_r2_client():
+    """Create boto3 S3 client for R2."""
+    import boto3
+    import os
+    return boto3.client("s3",
+        endpoint_url=os.environ.get("R2_ENDPOINT",
+            "https://b5e39abd50c5b82163c5fe72db9b880e.r2.cloudflarestorage.com"),
+        aws_access_key_id=os.environ.get("R2_ACCESS_KEY",
+            "d77b3d0a3829377b3b71ffc11f610435"),
+        aws_secret_access_key=os.environ.get("R2_SECRET_KEY",
+            "9206e3609275a5b8655d5c5b0f3faf536415e324f4493cfe3ce2b4ffb53e0244"))
+
+
+R2_BUCKET = "structok-training"
+
+
+def list_r2_checkpoints(r2_prefix):
+    """List checkpoint files under an R2 prefix."""
+    s3 = get_r2_client()
+    prefix = "%s/checkpoints/" % r2_prefix
+    resp = s3.list_objects_v2(Bucket=R2_BUCKET, Prefix=prefix)
+    keys = []
+    for obj in resp.get("Contents", []):
+        key = obj["Key"]
+        if key.endswith(".pt"):
+            keys.append(key)
+    return sorted(keys)
+
+
+def download_r2_checkpoint(r2_key, local_path):
+    """Download a checkpoint from R2."""
+    s3 = get_r2_client()
+    s3.download_file(R2_BUCKET, r2_key, str(local_path))
+
+
+def upload_r2(local_path, r2_key):
+    """Upload file to R2."""
+    s3 = get_r2_client()
+    s3.upload_file(str(local_path), R2_BUCKET, r2_key)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Multi-behavior head probing")
     parser.add_argument("--checkpoint", type=str, help="Single checkpoint path")
     parser.add_argument("--checkpoint-dir", type=str, help="Directory of checkpoints (batch mode)")
+    parser.add_argument("--r2-prefix", type=str, help="R2 prefix to probe (e.g. atlas/runs/baseline)")
+    parser.add_argument("--r2-output-prefix", type=str, help="R2 prefix for results upload")
     parser.add_argument("--tokenizer", required=True)
     parser.add_argument("--probe-dir", default="probes/")
     parser.add_argument("--output", type=str, help="Single output path")
@@ -340,8 +384,61 @@ def main():
             json.dump(output, f, indent=2)
         print("\nSaved to %s" % out_path)
 
+    elif args.r2_prefix:
+        # R2 streaming mode: download checkpoint, probe, upload result, delete local
+        out_dir = Path(args.output_dir) if args.output_dir else Path("/tmp/atlas-results/")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        r2_out = args.r2_output_prefix or args.r2_prefix.replace("/runs/", "/results/")
+
+        cp_keys = list_r2_checkpoints(args.r2_prefix)
+        print("Found %d checkpoints on R2 under %s" % (len(cp_keys), args.r2_prefix))
+
+        tmp_cp = Path("/tmp/atlas-probe-checkpoint.pt")
+
+        for cp_key in cp_keys:
+            step_name = Path(cp_key).stem  # step-00050
+            out_path = out_dir / ("%s.json" % step_name)
+
+            # Check if result already exists on R2
+            r2_result_key = "%s/%s.json" % (r2_out, step_name)
+
+            print("  Probing %s..." % step_name)
+            t0 = time.time()
+
+            # Download checkpoint
+            download_r2_checkpoint(cp_key, tmp_cp)
+
+            # Load and probe
+            model, tokenizer = load_model(str(tmp_cp), args.size, args.tokenizer)
+            results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
+            classifications = classify_heads(results)
+
+            output = {
+                "checkpoint": cp_key,
+                "step": step_name,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "classifications": classifications,
+                "raw_scores": results,
+            }
+
+            with open(out_path, "w") as f:
+                json.dump(output, f, indent=2)
+
+            # Upload result to R2
+            upload_r2(out_path, r2_result_key)
+
+            # Clean up
+            os.remove(tmp_cp)
+            os.remove(out_path)
+            del model
+            torch.cuda.empty_cache()
+
+            print("    Done (%.1fs) -> R2: %s" % (time.time() - t0, r2_result_key))
+
+        print("\nAll %d checkpoints probed. Results on R2 under %s" % (len(cp_keys), r2_out))
+
     elif args.checkpoint_dir:
-        # Batch mode
+        # Local batch mode
         cp_dir = Path(args.checkpoint_dir)
         out_dir = Path(args.output_dir) if args.output_dir else Path("results/")
         out_dir.mkdir(parents=True, exist_ok=True)
