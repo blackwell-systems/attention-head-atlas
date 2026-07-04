@@ -104,110 +104,91 @@ Target: cs.LG on arXiv. Standalone paper with cross-references to the prior two.
 - [x] Baseline training + probing (131 checkpoints, standard BPE)
 - [x] Comparison training + probing (131 checkpoints, merge barriers)
 - [x] Seed variation training + probing (131 checkpoints, different init)
-- [x] Excess score correction applied to all 3 runs
+- [x] Excess score correction applied to all 4 runs
 - [x] Developmental circuit discovery
 - [x] P0 deep analysis (failure cascade, circuit isolation, Gu et al. connection)
 - [x] Velocity-based circuit discovery
 - [x] NL adversarial surface analysis
-- [x] 10 findings documented in RESULTS.md
-- [x] 8 visualization charts
-- [ ] NL barriers experiment (in progress on vast.ai)
+- [x] NL-barrier training + probing (131 checkpoints, NL barriers)
+- [x] 11 findings documented in RESULTS.md
+- [x] 9 visualization charts (4-way comparison)
 - [ ] Structok corpus run (planned)
+- [ ] Spacing probe (planned)
 
 ## Repository Structure
 
 ```
 attention-head-atlas/
-  eval/                           # Scripts
-    train_atlas.py                # Training with step-0, background R2 upload, resume
-    probe_heads.py                # 8-behavior probing + entropy + frustration gap
-    excess_score_correction.py    # Post-hoc base-rate correction
-    prep_data.py                  # FineWeb download + parallel pretokenization
-    train_nl_tokenizer.py         # Train NL-barrier tokenizer
-    run_nl_pipeline.sh            # Full NL-barrier experiment pipeline
-    ascii-adversarial-surface.py  # 43-tokenizer adversarial surface scan
-    analyze_seed2.py              # Seed variation analysis
-    analyze_p0_deep.py            # P0 failure cascade analysis
-    analyze_velocity_circuits.py  # Derivative-based circuit discovery
-  probes/                         # Probe texts (6 standard + 2 extreme)
-  results/                        # Probe results
-    baseline/                     # 131 raw results
-    baseline-excess/              # 131 excess-corrected
-    comparison/                   # 131 raw results
-    comparison-excess/            # 131 excess-corrected
-    seed2/                        # 131 raw results (new probes)
-    seed2-excess/                 # 131 excess-corrected
-  charts/                         # Visualization
-    generate_atlas.py             # Chart generation (4-run support)
-    *.png                         # 8 charts
-  references/                     # 9 prior art PDFs
-  tokenizers/                     # NL-barrier tokenizer
-  EXPERIMENT-DESIGN.md            # Design, R2 schema, roadmap
-  RESULTS.md                      # 10 findings
-```
-
-## Repository Structure
-
-```
-attention-head-atlas/
-  eval/                         # Scripts
-    train_atlas.py              # Training with step-0 checkpoint, background R2 upload, resume support
-    probe_heads.py              # Multi-behavior probing: 8 types + entropy + frustration gap
-    excess_score_correction.py  # Post-hoc base-rate correction on existing results
-    prep_data.py                # Download FineWeb corpus + parallel pretokenization
-    ascii-adversarial-surface.py # 43-tokenizer adversarial surface scan (from merge-barriers)
-  probes/                       # Probe texts (input for probing)
-    prose.txt                   # Natural language, no punctuation (~256 tokens)
-    code.txt                    # Go function with structs (~256 tokens)
-    structured.txt              # GCF tabular data with pipe delimiters (~256 tokens)
-    induction.txt               # Repeated sentences for induction testing (~256 tokens)
-    duplicates.txt              # Repeated words for duplicate-token testing (~256 tokens)
-    brackets.txt                # Real Go code with balanced brackets (~256 tokens)
-    dense_json.txt              # Extreme: high delimiter density nested JSON
-    heavy_induction.txt         # Extreme: maximally repeated sequences
-  results/                      # Probe results (JSON per checkpoint)
-    baseline/                   # 131 raw probe results (standard BPE)
-    comparison/                 # 131 raw probe results (merge barriers)
-    baseline-excess/            # 131 excess-corrected results
-    comparison-excess/          # 131 excess-corrected results
-    ascii-adversarial-surface-43-tokenizers-20260625.json  # 43-tokenizer scan
-  charts/                       # Visualization
-    generate_atlas.py           # Chart generation script (raw + excess, light + dark)
-    README.md                   # Chart interpretation guide
-    *.png                       # Generated charts
-  references/                   # Prior art PDFs (8 papers)
-  EXPERIMENT-DESIGN.md          # Experiment design, R2 schema, roadmap
-  RESULTS.md                    # Findings narrative (9 findings)
+  eval/                            # Scripts
+    train_atlas.py                 # Training with step-0, background R2 upload, resume
+    probe_heads.py                 # 8-behavior probing + entropy + frustration gap
+    excess_score_correction.py     # Post-hoc base-rate correction
+    prep_data.py                   # FineWeb download + parallel pretokenization
+    train_nl_tokenizer.py          # Train NL-barrier tokenizer
+    run_nl_pipeline.sh             # Full NL-barrier experiment pipeline
+    ascii-adversarial-surface.py   # 43-tokenizer adversarial surface scan
+    analyze_seed2.py               # Seed variation analysis
+    analyze_p0_deep.py             # P0 failure cascade analysis
+    analyze_velocity_circuits.py   # Derivative-based circuit discovery
+    analyze_nl_barrier.py          # NL-barrier 3-way comparison
+  probes/                          # Probe texts (6 standard + 2 extreme)
+  results/                         # Probe results (JSON per checkpoint)
+    baseline/                      # 131 raw results (standard BPE)
+    baseline-excess/               # 131 excess-corrected
+    comparison/                    # 131 raw results (struct barriers)
+    comparison-excess/             # 131 excess-corrected
+    seed2/                         # 131 raw results (different init, new probes)
+    seed2-excess/                  # 131 excess-corrected
+    nl-barrier/                    # 131 raw results (NL barriers, new probes)
+    nl-barrier-excess/             # 131 excess-corrected
+    ascii-adversarial-surface-*.json  # 43-tokenizer scan
+  charts/                          # Visualization
+    generate_atlas.py              # Chart generation (4-run, excess-corrected)
+    *.png                          # 9 charts
+  references/                      # 9 prior art PDFs
+  tokenizers/                      # NL-barrier tokenizer
+  EXPERIMENT-DESIGN.md             # Experiment design, R2 schema, roadmap
+  R2-DATA-MODEL.md                 # R2 storage schema and JSON structure
+  RESULTS.md                       # 11 findings
 ```
 
 ## Scripts
 
 | Script | Purpose | Provenance |
 |--------|---------|------------|
-| `eval/train_atlas.py` | Train GPT-NeoX 410M with 131 checkpoints (step-0 through 20000). Saves locally, uploads to R2 in background thread with retry. Supports `--resume-from r2`. | Written for this project |
-| `eval/probe_heads.py` | Probe every head across 8 behavior types on 6 probe texts. Supports local checkpoints (`--checkpoint-dir`) or R2 streaming (`--r2-prefix`) with skip logic for existing results. GPU inference, model reuse across checkpoints. | Written for this project |
-| `eval/excess_score_correction.py` | Subtract step-0 base rates from raw scores to reveal genuine specialization. Reads existing results, writes corrected results to `*-excess/` directories. | Adapted from merge-barriers excess score methodology (Blackwell, 2026) |
-| `eval/prep_data.py` | Download FineWeb corpus from HuggingFace, pretokenize with both tokenizers in parallel using multiprocessing (12 workers, 1 MB segments). | Written for this project |
-| `eval/ascii-adversarial-surface.py` | Scan all 94 printable ASCII characters across 43 tokenizer vocabularies for merge entries. | Copied from gcf repo (`eval/ascii-adversarial-surface.py`) |
-| `charts/generate_atlas.py` | Generate all visualization charts from probe results. Supports raw and excess-corrected data, light and dark themes. | Written for this project |
+| `eval/train_atlas.py` | Train with 131 checkpoints, background R2 upload, `--resume-from` support | Written for this project |
+| `eval/probe_heads.py` | 8-behavior probing + entropy + frustration gap. Local or R2 streaming with skip logic | Written for this project |
+| `eval/excess_score_correction.py` | Subtract step-0 base rates to reveal genuine specialization | Adapted from merge-barriers (Blackwell, 2026) |
+| `eval/prep_data.py` | FineWeb download + parallel pretokenization (12 workers) | Written for this project |
+| `eval/train_nl_tokenizer.py` | Train NL-barrier tokenizer (. ' ? ! - " ( ) ; :) | Written for this project |
+| `eval/ascii-adversarial-surface.py` | 43-tokenizer adversarial surface scan | Copied from gcf repo |
+| `eval/analyze_seed2.py` | Seed variation analysis (distribution, circuits, entropy) | Written for this project |
+| `eval/analyze_p0_deep.py` | P0 failure cascade (prior types, timing, circuits, saved heads) | Written for this project |
+| `eval/analyze_velocity_circuits.py` | Derivative-based circuit discovery (cross-type links) | Written for this project |
+| `eval/analyze_nl_barrier.py` | NL-barrier 3-way comparison | Written for this project |
+| `charts/generate_atlas.py` | All charts, 4-run support, excess-corrected | Written for this project |
 
 ## Data on R2
 
-All training checkpoints and probe results are archived on Cloudflare R2 under the `structok-training` bucket with prefix `atlas/`.
+All data on Cloudflare R2, `structok-training` bucket, `atlas/` prefix. See R2-DATA-MODEL.md for full schema.
 
 ```
-atlas/tokens/         # Pretokenized bins + tokenizer JSONs
-atlas/runs/baseline/  # 131 training checkpoints (standard BPE)
-atlas/runs/comparison/ # 131 training checkpoints (merge barriers)
-atlas/runs/seed2/     # 131 training checkpoints (seed variation, in progress)
-atlas/results/baseline/ # 131 probe results
+atlas/tokens/            # 3 pretokenized bins + 3 tokenizer JSONs
+atlas/runs/baseline/     # 131 checkpoints (standard BPE)
+atlas/runs/comparison/   # 131 checkpoints (struct barriers)
+atlas/runs/seed2/        # 131 checkpoints (different init)
+atlas/runs/nl-barrier/   # 131 checkpoints (NL barriers)
+atlas/results/baseline/  # 131 probe results
 atlas/results/comparison/ # 131 probe results
-atlas/results/seed2/  # Probe results (pending)
+atlas/results/seed2/     # 131 probe results
+atlas/results/nl-barrier/ # 131 probe results
 ```
+
+524 training checkpoints (~890 GB). 524 probe results (~105 MB). All verified.
 
 ## Infrastructure
 
 - Training: GPT-NeoX 410M on A100 PCIE (vast.ai)
 - Corpus: FineWeb (HuggingFaceFW/fineweb, sample-10BT, ~5 GB)
-- Tokenizers: standard-64k.json (no barriers), structok-64k.json (16 merge barriers)
+- Tokenizers: standard-64k.json, structok-64k.json, nl-barrier-64k.json
 - Analysis: local (no GPU needed for post-hoc analysis and chart generation)
