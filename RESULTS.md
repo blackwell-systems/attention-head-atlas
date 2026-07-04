@@ -62,6 +62,8 @@ This is the first demonstration of circuit discovery through developmental co-sp
 
 ## Finding 6: Head Type Distribution at Convergence
 
+### Raw scores (inflated by base rates)
+
 | Type | Baseline | Comparison |
 |------|----------|------------|
 | Delimiter | 172 (44.8%) | 163 (42.4%) |
@@ -72,7 +74,23 @@ This is the first demonstration of circuit discovery through developmental co-sp
 | Induction | 3 (0.8%) | 1 (0.3%) |
 | Unclassified | 0 | 1 |
 
-Note: "Delimiter" classification is based on dominant behavior score on structured probe text, not the excess-score methodology from the merge-barriers paper. These numbers are not directly comparable to the 105 vs 23 delimiter heads reported there.
+### Excess scores (base-rate corrected)
+
+The raw classification was inflated by base rates. For example, the brackets probe is 100% delimiter characters, so every head scores high on delimiter for that probe regardless of specialization. The excess score methodology (from the merge-barriers paper) subtracts the step-0 base rate to reveal genuine specialization:
+
+| Type | Baseline Raw→Excess | Comparison Raw→Excess |
+|------|--------------------|-----------------------|
+| Delimiter | 172→83 | 163→66 |
+| Duplicate | 146→24 | 177→37 |
+| Positional (prev) | 24→102 | 28→99 |
+| P0 sink | 27→96 | 5→52 |
+| Induction | 3→32 | 1→26 |
+| Bracket | 12→9 | 9→47 |
+| Unclassified | 0→38 | 1→57 |
+
+With correction, **positional_prev is the most common genuine specialization** (102 baseline, 99 comparison), not delimiter. Delimiter drops to 83/66. A significant number of heads (38/57) show no genuine specialization above base rate.
+
+The comparison model has more unclassified heads (57 vs 38) and more bracket specialists (47 vs 9). The merge-barrier tokenizer produces more bracket-matching capacity, consistent with its clean delimiter boundaries enabling bracket-level structural processing.
 
 ## Methodology Notes
 
