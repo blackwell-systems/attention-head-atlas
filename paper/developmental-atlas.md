@@ -79,7 +79,7 @@ The present study extends this line of work from outcome measurement (how many h
 
 ### 3.1 Architecture and Training
 
-All experiments use GPT-NeoX 410M: a 24-layer transformer with 16 attention heads per layer (384 heads total). Models are trained on FineWeb (HuggingFaceFW/fineweb, sample-10BT), a high-quality web text corpus of approximately 5 GB. Training proceeds for 20,000 steps with a batch size of 8, context length of 2,048, bf16 precision, and a flat learning rate of 3e-4.
+All experiments use GPT-NeoX 410M: a 24-layer transformer with 16 attention heads per layer (384 heads total). Models are trained on FineWeb (HuggingFaceFW/fineweb, sample-10BT), a high-quality web text corpus of approximately 5 GB. Training proceeds for 20,000 steps with a batch size of 1 (single sequence per step), context length of 2,048, bf16 precision, and a flat learning rate of 3e-4.
 
 We save 131 checkpoints per run: step 0 (random initialization before any training), every 50 steps through step 2,000 (capturing the rapid early differentiation phase), and every 200 steps from step 2,000 through step 20,000 (capturing stabilization and late-training dynamics). This schedule provides high temporal resolution during the critical early period while maintaining coverage through convergence.
 
@@ -155,9 +155,7 @@ The merge-barrier model develops 5x more bracket specialists than the baseline (
 
 Between 38 and 66 heads show no genuine specialization above base rate (unclassified). These are truly generalist heads rather than misclassified specialists.
 
-![Figure 1: Developmental timeline showing head type counts over training for all runs. Stacked area chart with excess-corrected classifications.](../charts/developmental-timeline-excess.png)
-
-*Figure 1: developmental-timeline-excess.png. Head type distribution across training steps for baseline, comparison, seed2, and NL-barrier runs.*
+![Figure 1: Head type distribution across training steps for all runs (excess-corrected).](../charts/developmental-timeline-excess.png){ width=95% }
 
 ### 4.2 P0 Failure Cascade
 
@@ -192,9 +190,7 @@ Late layers are most vulnerable. Layer 23 (8 P0 heads) and Layer 17 (8 P0 heads)
 
 2. *"We will extend the research scope to explore how these sink tokens are related to the pre-training."* The tokenizer is the connection. Standard BPE produces 96 P0 heads; merge barriers produce 52. Same architecture, same data, only the tokenizer differs. The sink-prone tokens (merged delimiters) are created by BPE's merge decisions during tokenizer training, which is a pre-training decision.
 
-![Figure 2: P0 sink head count over training for all runs. Merge barriers reduce dormancy starting in early training.](../charts/p0-sink-emergence-excess.png)
-
-*Figure 2: p0-sink-emergence-excess.png. P0 sink head count over training steps for baseline, comparison, seed2, and NL-barrier runs.*
+![Figure 2: P0 sink head count over training for all runs.](../charts/p0-sink-emergence-excess.png){ width=85% }
 
 ### 4.3 Entropy Divergence
 
@@ -204,9 +200,7 @@ This is consistent with the P0 failure cascade: more P0 sinks means more heads r
 
 Entropy trajectories are seed-independent. Both baseline and seed2 follow the same curve: high at initialization (approximately 3.7 to 4.5), crash to approximately 0.38 by step 5,000, then rise to approximately 0.67 to 0.70 by step 20,000. The entropy divergence between standard BPE and merge barriers is architecture-determined, not seed-dependent.
 
-![Figure 3: Mean attention entropy over training for all runs. Baseline and seed2 overlap; comparison stays lower; NL-barrier rises highest.](../charts/entropy-three-way.png)
-
-*Figure 3: entropy-three-way.png. Mean attention entropy across training steps for baseline, comparison, seed2, and NL-barrier runs.*
+![Figure 3: Mean attention entropy over training. Baseline and seed2 overlap; comparison stays focused; NL-barrier rises highest.](../charts/entropy-three-way.png){ width=85% }
 
 ### 4.4 Frustration Gap Is Domain-Dependent
 
@@ -243,9 +237,7 @@ Key properties of these circuits:
 
 This is the first demonstration of circuit discovery through developmental co-specialization timing rather than activation patching (Conmy et al., 2023). The approach is complementary: activation patching identifies functional circuits (which heads contribute to a task), while developmental correlation identifies organizational circuits (which heads develop together).
 
-![Figure 4: Circuit heatmaps showing the largest co-specializing circuit for each run. Yellow marks positions shared across runs.](../charts/circuit-comparison.png)
-
-*Figure 4: circuit-comparison.png. Position heatmap of the largest co-specializing circuit for baseline, comparison, seed2, and NL-barrier runs.*
+![Figure 4: Largest co-specializing circuit for each run. Yellow marks positions shared across runs.](../charts/circuit-comparison.png){ width=95% }
 
 ### 4.6 Developmental Sequence
 
@@ -263,9 +255,7 @@ In the baseline model, layers 8 through 12 show the largest specialization incre
 
 The comparison model distributes specialization more evenly. Layers 6, 20, and 22 show the largest increases, rather than concentrating in layers 8 through 12. Merge barriers enable productive specialization at depths where the baseline model's heads collapse into P0 sinks.
 
-![Figure 5: Heatmap of per-layer specialization index over training. One panel per run.](../charts/layer-depth-specialization-excess.png)
-
-*Figure 5: layer-depth-specialization-excess.png. Per-layer specialization index across training steps for baseline and comparison runs.*
+![Figure 5: Per-layer specialization index over training.](../charts/layer-depth-specialization-excess.png){ width=95% }
 
 ### 4.8 Polysemanticity
 
@@ -281,9 +271,7 @@ Most heads are moderate specialists, not pure specialists or generalists.
 
 The merge-barrier model has fewer extreme specialists and fewer extreme generalists, pushing more heads into the moderate range: capable of multiple behaviors but with clear preferences. The baseline produces more extreme outcomes in both directions. This suggests that merge barriers stabilize the specialization landscape, preventing both over-commitment and under-commitment.
 
-![Figure 6: Specialist and generalist head counts over training.](../charts/polysemanticity-excess.png)
-
-*Figure 6: polysemanticity-excess.png. Specialist (>0.7) and generalist (<0.3) head counts over training for baseline and comparison runs.*
+![Figure 6: Specialist and generalist head counts over training.](../charts/polysemanticity-excess.png){ width=85% }
 
 ### 4.9 Natural Language Adversarial Surface
 
@@ -307,6 +295,8 @@ Reanalysis of the 43-tokenizer adversarial surface scan (from Blackwell, 2026a) 
 For comparison: pipe (GCF) has 24 mergeable words. Tab (TOON) has 1,238. JSON's quote has 193.
 
 Period alone has a 265x larger adversarial surface than pipe. Every sentence boundary in every tokenizer vocabulary has thousands of merged entries where the period fuses with the following word (`.the`, `.and`, `.this`). Every compound word merges the hyphen (`self-`, `well-`, `non-`). Every contraction merges the apostrophe (`'t`, `'s`, `'re`).
+
+These vocabulary entries are the measurable symptom of a deeper problem. During training, every occurrence of a merged period or hyphen teaches the model that the delimiter and the adjacent content are a single unit, shaping attention patterns across all heads over billions of examples. The adversarial surface is the visible entry point; the real damage is training-level weight shaping that constrains structural attention capacity even on inputs where no specific merged entry fires (Blackwell, 2026a).
 
 The reason this has not been noticed is that natural language structure is redundant. A missing sentence boundary can be inferred from capitalization and context. A missing field boundary in JSON cannot. But the attention capacity wasted on boundary recovery is proportional to the adversarial surface, not to the downstream error rate. If the model spends capacity recovering 6,366 merged period boundaries, that capacity is unavailable for content processing, even if the model ultimately recovers the boundaries correctly.
 
@@ -334,9 +324,7 @@ Some behaviors emerge at the same step across seeds (induction at step 150, dupl
 
 Circuits are seed-dependent in position but not in type. The baseline's largest circuit contains 21 positional_prev heads across 13 layers. Seed2's largest circuit contains 27 positional_prev heads across 14 layers. Only 1 position overlaps (L22H02). The model builds the same type of circuit (positional_prev backbone) at different architectural positions, confirming that circuit topology is architecture-determined while circuit placement is seed-dependent.
 
-![Figure 7: Bar chart comparing baseline vs seed2 head type distributions at step 20,000.](../charts/seed-comparison-excess.png)
-
-*Figure 7: seed-comparison-excess.png. Baseline vs seed2 head type distribution at convergence, with distribution correlation r=0.794.*
+![Figure 7: Baseline vs seed2 head type distribution at step 20,000 (r=0.794).](../charts/seed-comparison-excess.png){ width=85% }
 
 ### 4.11 Merge Barriers Are Universal
 
@@ -354,7 +342,7 @@ The NL-barrier model correlates at r=0.923 with the structured-barrier model and
 
 **NL barriers produce the most bracket specialists** of any run (60 vs 47 struct vs 9 baseline). The NL barrier set includes parentheses, which are common in web text. This directly confirms that barrier selection drives bracket specialization.
 
-**NL barriers reduce P0 dormancy** to the same level as structured barriers (57 vs 52 vs 96 baseline). The try-fail-collapse cascade is prevented regardless of which characters are protected.
+**NL barriers reduce P0 dormancy** to the same level as structured barriers (Section 4.2). The try-fail-collapse cascade is prevented regardless of which characters are protected.
 
 **NL barriers produce higher entropy** (1.21 at step 20,000 vs 0.70 baseline vs 0.38 struct). NL barrier characters are far more common in web text than structured barrier characters, so isolating them changes the token distribution more substantially.
 
@@ -457,8 +445,6 @@ Conmy, A., Mavor-Parker, A.N., Lynch, A., Heimersheim, S., & Garriga-Alonso, A. 
 Gu, G., et al. (2025). When attention sink emerges in language models. *ICLR 2025*.
 
 Michel, P., Levy, O., & Neubig, G. (2019). Are sixteen heads really better than one? *NeurIPS*.
-
-Musat, D., et al. (2026). Phase transitions in attention. *arXiv:2606.12058*.
 
 Olsson, C., Elhage, N., Nanda, N., et al. (2022). In-context learning and induction heads. *Transformer Circuits Thread*.
 
