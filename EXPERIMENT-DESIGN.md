@@ -130,22 +130,37 @@ The FineWeb atlas and the structok-corpus atlas together tell the full story: "t
 
 Estimated cost: ~$2.50. Requires the structok corpus pretokenized bins (already on R2 from merge-barriers experiments).
 
-### Fix: Excess Score Correction (post-hoc, free)
+### Natural Language Barriers (Run 5)
 
-The current classification uses raw scores, not excess scores. The merge-barriers paper solved this exact problem with the excess score methodology: subtract the base rate of delimiter positions from the raw delimiter attention. A head that scores 0.30 on delimiter when 0.30 of positions are delimiters has excess 0.00 (no specialization). A head that scores 0.30 when 0.10 of positions are delimiters has excess 0.20 (genuine specialist).
+Natural language has its own structural delimiters that BPE merges: contractions (`'t`, `'s` merge the apostrophe), quotation boundaries (`"Hello` merges like JSON's `"name`), sentence boundaries (`. ` merges across sentences), parentheticals (`(the` merges the paren), and hyphens (`self-` merges the separator).
 
-Apply the same correction to all behavior types. For each probe text, compute the base rate for each behavior (what fraction of positions are delimiter positions, what fraction are duplicate tokens, etc.) and subtract.
+The existing experiments used 16 barrier characters optimized for structured data (pipe, @, <, >, {, }, etc.). A natural-language-optimized barrier set would test whether merge barriers are a general principle, not just a structured data optimization:
 
-This is a post-hoc recomputation on the existing data. No new experiments needed. The raw scores in the JSONs contain everything required. This fix improves both the head type classification accuracy and sharpens the specialization index (removes base-rate inflation that makes everything look moderate).
+**NL barrier characters**: `' . ? ! - " ( ) ; :`
 
-### Fix: Extreme Probe Texts (re-probe step-20000 only)
+Drops pipe, @, <, >, {, }, [, ] (irrelevant to prose). Adds period, question mark, exclamation, hyphen (critical to prose structure).
 
-Add more probe texts with extreme characteristics to separate specialists from generalists:
-- A probe with zero delimiters (pure prose, no punctuation)
-- A probe with very high delimiter density (dense JSON or GCF)
-- A probe designed to maximally trigger induction (long repeated sequences)
+Three-way comparison using existing data:
+1. Baseline (no barriers) - already done
+2. Structured barriers (16 chars) - already done
+3. NL barriers (10 chars) - new run
 
-The current 6 probes all contain moderate amounts of everything. Extreme probes would produce clearer specialization signals. Only requires re-probing the step-20000 checkpoint to validate the methodology, not all 131.
+**What to measure:**
+- Does the frustration gap appear on prose-heavy probes?
+- Do new head types emerge (sentence-boundary heads, clause-boundary heads)?
+- Does natural language perplexity improve (the structured barriers showed 0.7x NL disadvantage; NL barriers might eliminate this)
+
+**What this proves:** If NL barriers improve prose processing, merge barriers are a universal principle applicable to any domain with structural delimiters, not just JSON/code/SMILES. This would significantly expand the impact of the research program.
+
+Estimated cost: ~$1.25. Requires a new tokenizer (local operation) and one training run on the existing FineWeb bin.
+
+### Completed: Excess Score Correction (post-hoc)
+
+Applied. The excess score methodology subtracts step-0 base rates to reveal genuine specialization. Corrected results in `results/baseline-excess/` and `results/comparison-excess/`. See RESULTS.md Finding 1 for impact.
+
+### Completed: Probe Text Improvements
+
+Improved probes written (real bracketed code, standardized lengths, punctuation-stripped prose). Pending validation on step-20000 checkpoint before full re-probe.
 
 ## Relationship to Prior Work
 
