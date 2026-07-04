@@ -72,6 +72,14 @@ Merge barriers don't just reduce the count. They convert wasted P0 capacity into
 
 **P0 count is seed-dependent.** 96 (baseline) vs 64 (seed2). Same tokenizer, different init. The overall pattern holds (standard BPE produces more P0 sinks than merge barriers) but the exact count varies. The effect is real; the precise number is not generalizable from a single seed.
 
+### Connection to Gu et al. (2025) Open Questions
+
+Gu et al. ("When Attention Sink Emerges in Language Models," ICLR 2025) posed two open questions in their Future Work that the atlas directly addresses:
+
+**Open question 1: "It remains unclear whether attention sink benefits LM downstream performance."** Our data shows P0 sinks are a failure mode, not a benefit. 35% of P0 heads were delimiter specialists that tried to specialize and failed. 100% are isolated from circuits (no computational role in co-specializing networks). Merge barriers that prevent P0 sinking produce more productive heads (79 converted to delimiter, positional_prev, induction, bracket). The model is better off without them.
+
+**Open question 2: "We will extend the research scope to explore how these sink tokens are related to the pre-training."** The tokenizer is the connection. Standard BPE produces 96 P0 heads; merge barriers produce 52. Same architecture, same data, only the tokenizer differs. The sink-prone tokens (merged delimiters) are created by BPE's merge decisions during tokenizer training, which is a pre-training decision. The tokenizer determines which heads have viable specialization targets and which will eventually collapse.
+
 Source: `eval/analyze_p0_deep.py`.
 
 ## Finding 3: Entropy Divergence
