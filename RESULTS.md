@@ -228,6 +228,20 @@ The closest methodological precedent. They tracked attention head specialization
 
 Their work validates the developmental probing methodology. Ours extends it to a full atlas.
 
+### Wang, Baker, Gordon & Murfet (2025): "Embryology of a Language Model"
+
+The most conceptually aligned prior work. They applied UMAP to per-token susceptibility vectors across training of a 3M parameter, 2-layer attention-only model, visualizing the developmental "body plan" as a "rainbow serpent" where token pattern types (word start, word part, induction, spacing, delimiter, formatting, numeric) separate into distinct regions.
+
+**Key connections:**
+- They note "the structure learned by a model may be substantially influenced by the tokenizer" (p.2) but don't test this. We explicitly vary the tokenizer and show it changes head development. We answer their observation empirically.
+- They discovered a **"spacing fin"**: a previously un-noticed structure for predicting space and newline tokens. This is a head specialization type our 8-behavior taxonomy does not probe for. Adding a spacing/whitespace probe is a gap worth filling.
+- Their UMAP structure is "remarkably similar across seeds" (4 seeds). Our Finding 10 confirms this at 410M scale (distribution correlation 0.794).
+- They use susceptibility (how weight perturbations affect loss). We use attention patterns (what heads attend to). Complementary lenses on the same underlying organization.
+
+**What we add:** Realistic scale (410M vs 3M), full architecture (24 layers + FFN vs 2 layers attention-only), tokenizer as a variable (they can't test this), circuit discovery, P0 failure cascade. They provide the most beautiful visualization of head organization. We provide the controlled experimental framework that isolates what causes it.
+
+**Gap identified:** Our probe taxonomy should include spacing/whitespace as a behavior type, following their discovery of the spacing fin as a distinct developmental structure.
+
 ### Gu et al. (2025): "When Attention Sink Emerges in Language Models" (ICLR 2025)
 
 See Finding 2 for detailed connection. We answer both of their stated open questions: (1) attention sinks are a failure mode, not a benefit; (2) the tokenizer determines how many heads sink.
@@ -246,3 +260,4 @@ Found emergence is stochastic across seeds on synthetic tasks. Our Finding 10 co
 2. **FineWeb only**: No structured data in training corpus. The frustration gap (0pp) is expected but limits connection to the stranded attention paper. A structok corpus run is planned.
 3. **Single architecture**: GPT-NeoX 410M only. Results may differ on Llama (GQA) or larger models.
 4. **Two seeds only**: Seed variation tested with one additional seed. More seeds would quantify the variance more precisely.
+5. **Missing spacing probe**: Wang et al. (2025) discovered a "spacing fin" for whitespace/newline prediction as a distinct head specialization. Our 8-behavior taxonomy does not include spacing. Some heads classified as "unclassified" may be spacing specialists.
