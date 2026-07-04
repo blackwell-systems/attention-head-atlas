@@ -62,6 +62,16 @@ This is the first demonstration of circuit discovery through developmental co-sp
 
 ## Finding 6: Head Type Distribution at Convergence
 
+### Why excess scores matter
+
+At random initialization, a head's attention is roughly uniform across all positions. If 30% of positions in a probe text are delimiter characters, a random head directs ~30% of attention to delimiters by chance. That's not specialization; it's arithmetic.
+
+The raw score says "this head puts 30% of attention on delimiters." The excess score says "this head puts 0% MORE attention on delimiters than a random head would." The first number is meaningless without knowing the base rate. The second reveals whether the head actually learned to prefer delimiters.
+
+The brackets probe is the extreme case: 100% delimiter characters. Every head scores 1.0 on delimiter for that probe. Without correction, the brackets probe makes every head look like a delimiter specialist. With correction, it contributes 0.0 excess because the base rate is also 1.0.
+
+The same applies to all behaviors. The duplicates probe has many repeated tokens (base rate ~0.19). A head scoring 0.20 on duplicate looks like it's specializing, but 0.20 - 0.19 = 0.01 excess: barely above chance. The correction reveals that 89 of the 172 "delimiter" heads in the raw classification were just tracking the base rate, not genuinely specializing.
+
 ### Raw scores (inflated by base rates)
 
 | Type | Baseline | Comparison |
