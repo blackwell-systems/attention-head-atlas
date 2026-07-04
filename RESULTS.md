@@ -208,6 +208,38 @@ Baseline's largest circuit: 21 positional_prev heads across 13 layers. Seed2's l
 
 Source: `eval/analyze_seed2.py`, data in `results/seed2-excess/`.
 
+## Positioning Against Prior Work
+
+### Riviere & Trott (2025): "Start Making Sense(s)"
+
+The closest methodological precedent. They tracked attention head specialization across Pythia checkpoints using lexical ambiguity (word sense disambiguation) as a developmental probe. Key similarities and differences:
+
+**Similarities:** Both use developmental probing across training checkpoints to track when heads specialize. Both perform causal ablation to verify identified heads are functionally important. Both find "developmental milestones" during early training (they report shifts at steps 1000 and 5000; we find rapid differentiation through step 500, stabilization by step 2000).
+
+**Differences:** They track ONE behavior (disambiguation) on ONE tokenizer. We track 8 behaviors simultaneously, compare 3 tokenizers, and add a seed variation control. They use public Pythia checkpoints (no training cost but can't vary the tokenizer). We train custom models (can isolate the tokenizer variable). They identify candidate heads; we discover circuits. They probe a linguistic task; we probe attention patterns directly.
+
+**What we add beyond their work:**
+1. Comprehensive multi-behavior tracking (not single-task)
+2. Tokenizer as experimental variable (their approach can't test this)
+3. Circuit discovery through developmental co-specialization
+4. P0 failure cascade mechanism (they don't study dormancy)
+5. Seed variation analysis (they reproduced across seeds for 14M only)
+6. NL adversarial surface analysis
+
+Their work validates the developmental probing methodology. Ours extends it to a full atlas.
+
+### Gu et al. (2025): "When Attention Sink Emerges in Language Models" (ICLR 2025)
+
+See Finding 2 for detailed connection. We answer both of their stated open questions: (1) attention sinks are a failure mode, not a benefit; (2) the tokenizer determines how many heads sink.
+
+### Wang et al. (2025): "Differentiation and Specialization of Attention Heads" (ICLR 2025 Spotlight)
+
+Closest to our atlas concept. They tracked head differentiation using the refined local learning coefficient (rLLC) and found a staged developmental order: bigrams first, then n-grams, then previous-token, then induction. But they used a 2-layer attention-only toy model. We replicate at realistic scale (24 layers, 16 heads, 410M parameters) and add the tokenizer variable.
+
+### Baherwani et al. (2026): "Emergent Capabilities Arise Randomly"
+
+Found emergence is stochastic across seeds on synthetic tasks. Our Finding 10 confirms this at realistic scale: distribution correlation 0.794 across seeds, circuits form the same type but at different positions.
+
 ## Known Limitations
 
 1. **Probe inconsistency**: Baseline and comparison used old probes (degenerate brackets, short texts). Seed2 used improved probes. Excess correction normalizes base rates but the underlying measurements differ. Full re-probe of baseline with improved probes pending.
