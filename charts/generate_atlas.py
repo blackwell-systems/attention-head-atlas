@@ -39,11 +39,13 @@ RUN_COLORS = {
     'baseline': '#ff4444',
     'comparison': '#18befc',
     'seed2': '#22c55e',
+    'nl-barrier': '#a78bfa',
 }
 RUN_LABELS = {
     'baseline': 'Baseline (standard BPE)',
-    'comparison': 'Comparison (merge barriers)',
-    'seed2': 'Seed2 (standard BPE, different init)',
+    'comparison': 'Comparison (struct barriers)',
+    'seed2': 'Seed2 (standard BPE, diff init)',
+    'nl-barrier': 'NL barriers (. \' ? ! - etc)',
 }
 
 # Theme globals
@@ -149,7 +151,7 @@ def load_timeline(run_dir):
 def get_available_runs(use_excess):
     """Return list of runs that have data."""
     runs = []
-    for run in ['baseline', 'comparison', 'seed2']:
+    for run in ['baseline', 'comparison', 'seed2', 'nl-barrier']:
         if run_exists(run, use_excess):
             runs.append(run)
     return runs
