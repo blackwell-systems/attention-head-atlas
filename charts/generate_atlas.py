@@ -464,6 +464,57 @@ def chart_circuit_comparison():
     save(fig, 'circuit-comparison')
 
 
+def chart_emergence_order(use_excess=False):
+    """When each behavior type first exceeds a threshold of heads."""
+    label = 'excess' if use_excess else 'raw'
+    runs = get_available_runs(use_excess)
+    threshold = 5  # first step where type has >= 5 heads
+
+    active_behaviors = [b for b in BEHAVIORS if b != 'unclassified']
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    setup_ax(ax, 'Emergence Order: When Each Specialization First Appears\n'
+             'First step with >= %d heads of each type (%s scores)' % (threshold, label),
+             xlabel='Training step', ylabel='')
+
+    y_positions = np.arange(len(active_behaviors))
+    bar_height = 0.25
+    offsets = np.linspace(-bar_height * (len(runs) - 1) / 2,
+                          bar_height * (len(runs) - 1) / 2, len(runs))
+
+    for run_idx, run in enumerate(runs):
+        run_dir = get_run_dir(run, use_excess)
+        steps, tc, _, _, _ = load_timeline(run_dir)
+
+        emergence_steps = []
+        for b in active_behaviors:
+            first = None
+            for i, count in enumerate(tc[b]):
+                if count >= threshold:
+                    first = steps[i]
+                    break
+            emergence_steps.append(first if first is not None else 20000)
+
+        y = y_positions + offsets[run_idx]
+        bars = ax.barh(y, emergence_steps, height=bar_height,
+                      color=RUN_COLORS.get(run, '#888888'), alpha=0.8,
+                      label=RUN_LABELS.get(run, run))
+
+        for bar, step in zip(bars, emergence_steps):
+            if step < 20000:
+                ax.text(bar.get_width() + 50, bar.get_y() + bar.get_height() / 2,
+                       str(step), va='center', fontsize=8, color=TEXT)
+
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels(active_behaviors, fontsize=10)
+    ax.set_xlim(0, 2500)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT,
+             loc='lower right')
+    ax.invert_yaxis()
+
+    save(fig, 'emergence-order-%s' % label)
+
+
 ALL_CHARTS = [
     chart_developmental_timeline,
     chart_entropy_three_way,
@@ -472,6 +523,7 @@ ALL_CHARTS = [
     chart_layer_depth,
     chart_polysemanticity,
     chart_seed_comparison,
+    chart_emergence_order,
 ]
 
 STANDALONE_CHARTS = [
