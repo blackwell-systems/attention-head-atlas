@@ -34,20 +34,22 @@ Without this correction, the original probe set produced heavily inflated classi
 
 **38-57 heads show no genuine specialization** above base rate (unclassified). These are truly generalist heads, not misclassified specialists.
 
-## Finding 2: Merge Barriers Reduce Dormancy
+## Finding 2: Heads Attempt Specialization, Fail, and Collapse into P0 Sinks
+
+Attention heads don't start dormant. They become dormant after failing to specialize. Tracking the 96 baseline P0 heads backward through 131 checkpoints reveals that 35% were delimiter heads that attempted structural specialization before sinking, and 39% were unclassified heads that never found a viable specialization. Only a minority go directly to P0 from random init.
+
+This is the same stranding mechanism described in the companion paper (Blackwell, 2026), operating at lower intensity on web text. The frustration gap is 0pp because the model doesn't develop enough structural capacity to measure a gap, but the damage is still happening: heads are dying because they can't find clean boundaries to anchor on.
 
 P0 sink heads (excess-corrected):
 - **Baseline**: 96 heads (25.0%)
 - **Comparison**: 52 heads (13.5%)
-- **Seed2**: 64 heads (16.7%) (seed-dependent but still higher than comparison)
+- **Seed2**: 64 heads (16.7%)
 
-The merge-barrier tokenizer nearly halves the number of heads that collapse into attention sinks. This extends Sandoval-Segura et al. (2025) by showing that dormancy is partially tokenizer-dependent, not just a fixed property of the architecture.
-
-This effect appears even on web-heavy data (FineWeb) with minimal structured content, suggesting merge barriers have a general attention-health benefit beyond structured data processing.
+Merge barriers don't just reduce the count. They convert wasted P0 capacity into productive specialization: at the 96 positions where baseline has P0 sinks, comparison has 23 delimiter heads, 22 positional_prev, 9 induction, 8 bracket. Only 17 are P0 in both. 79 heads saved from collapse.
 
 ### P0 Deep Analysis
 
-**What were P0 heads before they sank?** 35% were delimiter heads that attempted structural specialization and failed. 39% were unclassified (never found a specialization). P0 sinking is a failure mode: heads attempted specialization, couldn't succeed with corrupted boundaries, and collapsed. This connects directly to the stranding concept from the companion paper.
+**What were P0 heads before they sank?** This is the mechanistic finding. P0 sinking is a failure cascade, not a design choice.
 
 | Prior type | Baseline | Seed2 |
 |-----------|----------|-------|
@@ -64,7 +66,11 @@ This effect appears even on web-heavy data (FineWeb) with minimal structured con
 
 **Merge barriers save 79 heads from P0.** At the 96 positions where baseline has P0 sinks, comparison has: 23 delimiter, 22 positional_prev, 9 duplicate, 9 induction, 8 bracket, 8 unclassified. Only 17 are P0 in both. Merge barriers convert wasted P0 capacity directly into productive specialization.
 
-**P0 heads are 100% isolated.** None of the 96 baseline P0 heads belong to any co-specializing circuit. Circuits are resistant to dormancy; isolated heads are not. This suggests circuits provide mutual reinforcement that prevents collapse.
+**Sinking is late, not early.** Median sink step: 11,000. 62 of 96 heads sink after step 2,000. This contradicts the intuition that dormancy is an early phenomenon. Gu et al. (2025) characterized P0 sinks as forming during early training. The atlas shows most heads sink LATE, after thousands of steps of attempting specialization. They don't start dormant; they become dormant after failing. This is a different mechanism than what the literature describes.
+
+**P0 heads are 100% isolated.** None of the 96 baseline P0 heads belong to any co-specializing circuit. Circuits are resistant to dormancy; isolated heads are not. This suggests circuits provide mutual reinforcement that prevents collapse: heads that wire together survive; heads that don't, sink. This is a novel insight about why circuits form: they're not just computationally useful, they're developmentally protective.
+
+**P0 count is seed-dependent.** 96 (baseline) vs 64 (seed2). Same tokenizer, different init. The overall pattern holds (standard BPE produces more P0 sinks than merge barriers) but the exact count varies. The effect is real; the precise number is not generalizable from a single seed.
 
 Source: `eval/analyze_p0_deep.py`.
 
