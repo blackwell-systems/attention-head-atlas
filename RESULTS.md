@@ -136,9 +136,43 @@ This suggests merge barriers may be a universal principle for language modeling,
 
 Source data: `results/ascii-adversarial-surface-43-tokenizers-20260625.json` (43 tokenizers, 94 printable ASCII characters).
 
+## Finding 10: Emergence Is Partially Stochastic Across Seeds
+
+Seed2 uses the same standard BPE tokenizer and FineWeb corpus as baseline, with a different random initialization. Seed2 used improved probe texts (real bracketed code, standardized lengths, punctuation-stripped prose); excess correction normalizes across probe sets.
+
+### Head type distribution (excess-corrected, step 20000)
+
+| Type | Baseline | Seed2 | Diff |
+|------|----------|-------|------|
+| Delimiter | 83 | 143 | +60 |
+| Positional (prev) | 102 | 86 | -16 |
+| P0 sink | 96 | 64 | -32 |
+| Unclassified | 38 | 51 | +13 |
+| Induction | 32 | 27 | -5 |
+| Duplicate | 24 | 10 | -14 |
+| Bracket | 9 | 3 | -6 |
+
+Distribution correlation: **0.794**. The overall pattern holds (positional_prev and delimiter dominate in both), but exact counts vary substantially. This confirms Baherwani et al. (2026): emergence is partially stochastic. The architecture determines which types of specialization are possible; the random seed determines how many heads commit to each type.
+
+### Emergence timing
+
+Some behaviors emerge at the same step across seeds (induction at step 150, duplicate at step 50, P0 at step 100). Others vary. The emergence order is partially fixed by architecture but not fully deterministic.
+
+### Entropy trajectory is seed-independent
+
+Both seeds follow the same entropy curve: high at init (~3.7-4.5), crash to ~0.38 by step 5000, rise to ~0.67-0.70 by step 20000. The entropy divergence between standard BPE and merge barriers (Finding 3) is architecture-determined, not seed-dependent.
+
+### Circuits are seed-dependent in position but not in type
+
+Baseline's largest circuit: 21 positional_prev heads across 13 layers. Seed2's largest: 27 positional_prev heads across 14 layers. Only 1 position overlaps (L22H02). The model builds the same TYPE of circuit (positional_prev backbone) but at different architectural positions. Seed2 additionally develops a 19-head delimiter circuit that baseline's largest circuit doesn't include.
+
+**Conclusion:** The developmental sequence is partially deterministic (same types emerge, same entropy trajectory, similar distribution) and partially stochastic (different head counts, different circuit positions, different circuit sizes). Single-run observations about which specific heads specialize cannot be generalized, but observations about which types of specialization emerge and when can be.
+
+Source: `eval/analyze_seed2.py`, data in `results/seed2-excess/`.
+
 ## Known Limitations
 
-1. **Probe quality**: The brackets probe used in data collection was degenerate (100% delimiter characters). The excess correction compensates, but improved probes have been written for future runs. Validation on step-20000 pending.
-2. **FineWeb only**: No structured data in training corpus. The frustration gap finding (0pp) is expected but limits the connection to the stranded attention paper. A structok corpus run is planned.
-3. **No seed variation**: Baseline and comparison use different random inits (different instances). A seed variation run (seed2) is in progress to test whether the developmental order is deterministic.
-4. **Single architecture**: GPT-NeoX 410M only. Results may differ on Llama (GQA) or larger models.
+1. **Probe inconsistency**: Baseline and comparison used old probes (degenerate brackets, short texts). Seed2 used improved probes. Excess correction normalizes base rates but the underlying measurements differ. Full re-probe of baseline with improved probes pending.
+2. **FineWeb only**: No structured data in training corpus. The frustration gap (0pp) is expected but limits connection to the stranded attention paper. A structok corpus run is planned.
+3. **Single architecture**: GPT-NeoX 410M only. Results may differ on Llama (GQA) or larger models.
+4. **Two seeds only**: Seed variation tested with one additional seed. More seeds would quantify the variance more precisely.
