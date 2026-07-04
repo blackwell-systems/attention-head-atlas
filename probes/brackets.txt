@@ -1,1 +1,32 @@
-((()))(())(((())))()(()())(((()())))(()((())))()(())(((()))())(()()())((()(())))(()(()(())))()(((())))(()())(((()()))())()(()((())))((()(()())))(())(((()))()())(()(()(()))())
+func processOrders(ctx context.Context, orders []Order) ([]Result, error) {
+    results := make([]Result, 0, len(orders))
+    for _, order := range orders {
+        if order.Status == "pending" {
+            validated, err := validate(order)
+            if err != nil {
+                return nil, fmt.Errorf("validation failed: %w", err)
+            }
+            if validated.IsValid {
+                result := transform(validated)
+                if result.Total > 0 {
+                    results = append(results, result)
+                }
+            }
+        } else if order.Status == "retry" {
+            if retried, ok := retry(order); ok {
+                results = append(results, retried)
+            }
+        }
+    }
+    return results, nil
+}
+
+func validate(order Order) (ValidatedOrder, error) {
+    rules := getRules(order.Type)
+    for _, rule := range rules {
+        if !rule.Check(order) {
+            return ValidatedOrder{}, fmt.Errorf("rule %s failed", rule.Name)
+        }
+    }
+    return ValidatedOrder{Order: order, IsValid: true}, nil
+}
