@@ -89,21 +89,84 @@ For each checkpoint, for each head (24 layers x 16 heads = 384):
 
 This project emerges from the merge-barriers research (github.com/blackwell-systems/merge-barriers). During that work, we measured delimiter head emergence at step ~1000 and gradient-attention coupling over 20K steps. The natural next question: what ELSE is developing simultaneously?
 
-## Status
+## Status (2026-07-04)
 
-Planning. Requires:
-- [ ] Finalize probe set (texts that test each behavior type)
-- [ ] Write multi-probe evaluation script
-- [ ] Train with frequent checkpointing
-- [ ] Analysis and visualization
+- [x] Baseline training (standard BPE, 131 checkpoints on R2)
+- [x] Comparison training (merge barriers, 131 checkpoints on R2)
+- [x] Probing both runs (262 probe result JSONs on R2 and in repo)
+- [x] Excess score correction (base-rate adjusted classifications)
+- [x] Developmental circuit discovery (32/36-head delimiter circuits)
+- [x] 9 findings documented in RESULTS.md
+- [x] 11 visualization charts
+- [ ] Seed variation run (in progress)
+- [ ] Structok corpus run (planned)
+- [ ] NL barriers experiment (planned)
+- [ ] Improved probe validation on step-20000
 
-Estimated cost: ~$5-10 (one 410M training run on a 4090, ~2 hours, plus probe evaluation at each checkpoint).
+9 findings so far. See RESULTS.md for the full analysis.
+
+## Repository Structure
+
+```
+attention-head-atlas/
+  eval/                         # Scripts
+    train_atlas.py              # Training with step-0 checkpoint, background R2 upload, resume support
+    probe_heads.py              # Multi-behavior probing: 8 types + entropy + frustration gap
+    excess_score_correction.py  # Post-hoc base-rate correction on existing results
+    prep_data.py                # Download FineWeb corpus + parallel pretokenization
+    ascii-adversarial-surface.py # 43-tokenizer adversarial surface scan (from merge-barriers)
+  probes/                       # Probe texts (input for probing)
+    prose.txt                   # Natural language, no punctuation (~256 tokens)
+    code.txt                    # Go function with structs (~256 tokens)
+    structured.txt              # GCF tabular data with pipe delimiters (~256 tokens)
+    induction.txt               # Repeated sentences for induction testing (~256 tokens)
+    duplicates.txt              # Repeated words for duplicate-token testing (~256 tokens)
+    brackets.txt                # Real Go code with balanced brackets (~256 tokens)
+    dense_json.txt              # Extreme: high delimiter density nested JSON
+    heavy_induction.txt         # Extreme: maximally repeated sequences
+  results/                      # Probe results (JSON per checkpoint)
+    baseline/                   # 131 raw probe results (standard BPE)
+    comparison/                 # 131 raw probe results (merge barriers)
+    baseline-excess/            # 131 excess-corrected results
+    comparison-excess/          # 131 excess-corrected results
+    ascii-adversarial-surface-43-tokenizers-20260625.json  # 43-tokenizer scan
+  charts/                       # Visualization
+    generate_atlas.py           # Chart generation script (raw + excess, light + dark)
+    README.md                   # Chart interpretation guide
+    *.png                       # Generated charts
+  references/                   # Prior art PDFs (8 papers)
+  EXPERIMENT-DESIGN.md          # Experiment design, R2 schema, roadmap
+  RESULTS.md                    # Findings narrative (9 findings)
+```
+
+## Scripts
+
+| Script | Purpose | Provenance |
+|--------|---------|------------|
+| `eval/train_atlas.py` | Train GPT-NeoX 410M with 131 checkpoints (step-0 through 20000). Saves locally, uploads to R2 in background thread with retry. Supports `--resume-from r2`. | Written for this project |
+| `eval/probe_heads.py` | Probe every head across 8 behavior types on 6 probe texts. Supports local checkpoints (`--checkpoint-dir`) or R2 streaming (`--r2-prefix`) with skip logic for existing results. GPU inference, model reuse across checkpoints. | Written for this project |
+| `eval/excess_score_correction.py` | Subtract step-0 base rates from raw scores to reveal genuine specialization. Reads existing results, writes corrected results to `*-excess/` directories. | Adapted from merge-barriers excess score methodology (Blackwell, 2026) |
+| `eval/prep_data.py` | Download FineWeb corpus from HuggingFace, pretokenize with both tokenizers in parallel using multiprocessing (12 workers, 1 MB segments). | Written for this project |
+| `eval/ascii-adversarial-surface.py` | Scan all 94 printable ASCII characters across 43 tokenizer vocabularies for merge entries. | Copied from gcf repo (`eval/ascii-adversarial-surface.py`) |
+| `charts/generate_atlas.py` | Generate all visualization charts from probe results. Supports raw and excess-corrected data, light and dark themes. | Written for this project |
+
+## Data on R2
+
+All training checkpoints and probe results are archived on Cloudflare R2 under the `structok-training` bucket with prefix `atlas/`.
+
+```
+atlas/tokens/         # Pretokenized bins + tokenizer JSONs
+atlas/runs/baseline/  # 131 training checkpoints (standard BPE)
+atlas/runs/comparison/ # 131 training checkpoints (merge barriers)
+atlas/runs/seed2/     # 131 training checkpoints (seed variation, in progress)
+atlas/results/baseline/ # 131 probe results
+atlas/results/comparison/ # 131 probe results
+atlas/results/seed2/  # Probe results (pending)
+```
 
 ## Infrastructure
 
-- Training: adapted `train_model.py` from structok repo (frequent checkpointing mode)
-- Hardware: RTX 4090 or A100 on Vast.ai
-- Data: SlimPajama or RedPajama-v2 (~5GB sample, standard pretraining distribution)
-- Tokenizer (baseline): standard BPE 64K vocab (no barriers)
-- Tokenizer (comparison): structok-64k.json (merge barriers)
-- Probes: custom multi-behavior evaluation script (new, to be written)
+- Training: GPT-NeoX 410M on A100 PCIE (vast.ai)
+- Corpus: FineWeb (HuggingFaceFW/fineweb, sample-10BT, ~5 GB)
+- Tokenizers: standard-64k.json (no barriers), structok-64k.json (16 merge barriers)
+- Analysis: local (no GPU needed for post-hoc analysis and chart generation)
