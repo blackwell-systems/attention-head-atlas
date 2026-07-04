@@ -39,10 +39,34 @@ Without this correction, the original probe set produced heavily inflated classi
 P0 sink heads (excess-corrected):
 - **Baseline**: 96 heads (25.0%)
 - **Comparison**: 52 heads (13.5%)
+- **Seed2**: 64 heads (16.7%) (seed-dependent but still higher than comparison)
 
 The merge-barrier tokenizer nearly halves the number of heads that collapse into attention sinks. This extends Sandoval-Segura et al. (2025) by showing that dormancy is partially tokenizer-dependent, not just a fixed property of the architecture.
 
 This effect appears even on web-heavy data (FineWeb) with minimal structured content, suggesting merge barriers have a general attention-health benefit beyond structured data processing.
+
+### P0 Deep Analysis
+
+**What were P0 heads before they sank?** 35% were delimiter heads that attempted structural specialization and failed. 39% were unclassified (never found a specialization). P0 sinking is a failure mode: heads attempted specialization, couldn't succeed with corrupted boundaries, and collapsed. This connects directly to the stranding concept from the companion paper.
+
+| Prior type | Baseline | Seed2 |
+|-----------|----------|-------|
+| Unclassified (never specialized) | 37 (39%) | 32 (50%) |
+| Delimiter (tried, failed) | 34 (35%) | 21 (33%) |
+| Duplicate | 7 (7%) | 6 (9%) |
+| Induction | 7 (7%) | 0 |
+| Positional_prev | 7 (7%) | 4 (6%) |
+| Bracket | 4 (4%) | 1 (2%) |
+
+**When do they sink?** Gradual attrition, not a phase transition. Earliest: step 100. Median: step 11,000. 62 of 96 sink late (after step 2000). Individual heads give up at different times across training.
+
+**Late layers are most vulnerable.** L23 (8 heads) and L17 (8 heads) have the highest P0 concentration in baseline. These layers handle the most complex processing and are most sensitive to boundary corruption.
+
+**Merge barriers save 79 heads from P0.** At the 96 positions where baseline has P0 sinks, comparison has: 23 delimiter, 22 positional_prev, 9 duplicate, 9 induction, 8 bracket, 8 unclassified. Only 17 are P0 in both. Merge barriers convert wasted P0 capacity directly into productive specialization.
+
+**P0 heads are 100% isolated.** None of the 96 baseline P0 heads belong to any co-specializing circuit. Circuits are resistant to dormancy; isolated heads are not. This suggests circuits provide mutual reinforcement that prevents collapse.
+
+Source: `eval/analyze_p0_deep.py`.
 
 ## Finding 3: Entropy Divergence
 
