@@ -154,6 +154,16 @@ Three-way comparison using existing data:
 
 Estimated cost: ~$1.25. Requires a new tokenizer (local operation) and one training run on the existing FineWeb bin.
 
+### Fix: Add Spacing Behavior to Probe Taxonomy
+
+Wang et al. (2025, "Embryology of a Language Model") discovered a "spacing fin": a distinct head specialization for predicting space and newline tokens. Our 8-behavior taxonomy does not include spacing. Some heads currently classified as "unclassified" may be spacing specialists.
+
+**Implementation:** Add `measure_spacing()` to `probe_heads.py` that measures attention mass on positions containing space, newline, tab, and carriage return tokens. Same methodology as `measure_delimiter()` but filtering for whitespace characters.
+
+**Validation:** Re-probe step-20000 for all runs (~2 minutes per run on GPU). If spacing is a genuine category (heads with high excess spacing scores), add it to the full taxonomy for future runs.
+
+**Cost:** Requires GPU for re-probing. Can run on the NL-barrier instance after it finishes. No new training needed.
+
 ### Completed: Excess Score Correction (post-hoc)
 
 Applied. The excess score methodology subtracts step-0 base rates to reveal genuine specialization. Corrected results in `results/baseline-excess/` and `results/comparison-excess/`. See RESULTS.md Finding 1 for impact.
