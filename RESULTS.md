@@ -66,7 +66,7 @@ Merge barriers don't just reduce the count. They convert wasted P0 capacity into
 
 **Merge barriers save 79 heads from P0.** At the 96 positions where baseline has P0 sinks, comparison has: 23 delimiter, 22 positional_prev, 9 duplicate, 9 induction, 8 bracket, 8 unclassified. Only 17 are P0 in both. Merge barriers convert wasted P0 capacity directly into productive specialization.
 
-**Sinking is late, not early.** Median sink step: 11,000. 62 of 96 heads sink after step 2,000. This contradicts the intuition that dormancy is an early phenomenon. Gu et al. (2025) characterized P0 sinks as forming during early training. The atlas shows most heads sink LATE, after thousands of steps of attempting specialization. They don't start dormant; they become dormant after failing. This is a different mechanism than what the literature describes.
+**Sinking is late, not early.** Median sink step: 11,000. 62 of 96 heads sink after step 2,000. Gu et al. (2025) showed the P0 sink mechanism (the ability of position 0 to attract attention) emerges globally by step 1-2K. Our finding extends this: the mechanism is available early, but individual heads don't collapse into it until much later, after failing at other specializations. Gu et al. studied when the infrastructure appears. We study when heads decide to use it.
 
 **P0 heads are 100% isolated.** None of the 96 baseline P0 heads belong to any co-specializing circuit. Circuits are resistant to dormancy; isolated heads are not. This suggests circuits provide mutual reinforcement that prevents collapse: heads that wire together survive; heads that don't, sink. This is a novel insight about why circuits form: they're not just computationally useful, they're developmentally protective.
 
