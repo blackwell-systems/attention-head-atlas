@@ -421,10 +421,18 @@ def list_r2_checkpoints(r2_prefix):
     return sorted(keys)
 
 
-def download_r2_checkpoint(r2_key, local_path):
-    """Download a checkpoint from R2."""
+def download_r2_checkpoint(r2_key, local_path, max_retries=3):
+    """Download a checkpoint from R2 with retries."""
     s3 = get_r2_client()
-    s3.download_file(R2_BUCKET, r2_key, str(local_path))
+    for attempt in range(1, max_retries + 1):
+        try:
+            s3.download_file(R2_BUCKET, r2_key, str(local_path))
+            return True
+        except Exception as e:
+            if attempt < max_retries:
+                time.sleep(5 * attempt)
+            else:
+                raise Exception("Failed to download %s after %d attempts: %s" % (r2_key, max_retries, e))
 
 
 def upload_r2(local_path, r2_key):
@@ -516,43 +524,73 @@ def main():
 
         tmp_cp = Path("/tmp/atlas-probe-checkpoint.pt")
 
+        # Check which results already exist on R2
+        s3 = get_r2_client()
+        existing = set()
+        try:
+            paginator = s3.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=R2_BUCKET, Prefix=r2_out + "/"):
+                for obj in page.get("Contents", []):
+                    existing.add(Path(obj["Key"]).stem)
+        except Exception:
+            pass
+        print("Already probed: %d, remaining: %d" % (len(existing), len(cp_keys) - len(existing)), flush=True)
+
+        completed = 0
+        failed = 0
         for cp_key in cp_keys:
             step_name = Path(cp_key).stem
             r2_result_key = "%s/%s.json" % (r2_out, step_name)
 
+            if step_name in existing:
+                completed += 1
+                continue
+
             print("  Probing %s..." % step_name, end=" ", flush=True)
             t0 = time.time()
 
-            # Download checkpoint
-            download_r2_checkpoint(cp_key, tmp_cp)
+            try:
+                # Download checkpoint with retry
+                download_r2_checkpoint(cp_key, tmp_cp)
 
-            # Swap state_dict (stays on GPU)
-            cp = torch.load(tmp_cp, map_location=args.device, weights_only=False)
-            model.load_state_dict(cp.get("model_state_dict", cp), strict=False)
-            os.remove(tmp_cp)
-            del cp
+                # Swap state_dict (stays on GPU)
+                cp = torch.load(tmp_cp, map_location=args.device, weights_only=False)
+                model.load_state_dict(cp.get("model_state_dict", cp), strict=False)
+                if tmp_cp.exists():
+                    os.remove(tmp_cp)
+                del cp
 
-            # Probe
-            results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
-            classifications = classify_heads(results)
+                # Probe
+                results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
+                classifications = classify_heads(results)
 
-            output = {
-                "checkpoint": cp_key,
-                "step": step_name,
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "classifications": classifications,
-                "raw_scores": results,
-            }
+                output = {
+                    "checkpoint": cp_key,
+                    "step": step_name,
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "classifications": classifications,
+                    "raw_scores": results,
+                }
 
-            out_path = out_dir / ("%s.json" % step_name)
-            with open(out_path, "w") as f:
-                json.dump(output, f, indent=2)
+                out_path = out_dir / ("%s.json" % step_name)
+                with open(out_path, "w") as f:
+                    json.dump(output, f, indent=2)
 
-            # Upload result to R2
-            upload_r2(out_path, r2_result_key)
-            os.remove(out_path)
+                # Upload result to R2
+                upload_r2(out_path, r2_result_key)
+                os.remove(out_path)
+                completed += 1
 
-            print("%.1fs" % (time.time() - t0), flush=True)
+                print("%.1fs" % (time.time() - t0), flush=True)
+
+            except Exception as e:
+                failed += 1
+                print("FAILED: %s" % e, flush=True)
+                if tmp_cp.exists():
+                    os.remove(tmp_cp)
+
+        print("\nCompleted: %d, Failed: %d, Skipped (existing): %d" % (
+            completed - len(existing), failed, len(existing)), flush=True)
 
         print("\nAll %d checkpoints probed. Results on R2 under %s" % (len(cp_keys), r2_out))
 
