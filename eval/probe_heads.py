@@ -487,31 +487,52 @@ def main():
         print("\nSaved to %s" % out_path)
 
     elif args.r2_prefix:
-        # R2 streaming mode: download checkpoint, probe, upload result, delete local
+        # R2 streaming mode: download checkpoint, probe on GPU, upload result, delete local
         out_dir = Path(args.output_dir) if args.output_dir else Path("/tmp/atlas-results/")
         out_dir.mkdir(parents=True, exist_ok=True)
         r2_out = args.r2_output_prefix or args.r2_prefix.replace("/runs/", "/results/")
 
         cp_keys = list_r2_checkpoints(args.r2_prefix)
-        print("Found %d checkpoints on R2 under %s" % (len(cp_keys), args.r2_prefix))
+        print("Found %d checkpoints on R2 under %s" % (len(cp_keys), args.r2_prefix), flush=True)
+
+        # Create model ONCE, load to GPU, swap state_dict per checkpoint
+        from tokenizers import Tokenizer as Tok
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        tokenizer = Tok.from_file(args.tokenizer)
+        vocab_size = tokenizer.get_vocab_size()
+        cfg = MODEL_CONFIGS[args.size]
+        model_config = GPTNeoXConfig(
+            vocab_size=vocab_size,
+            hidden_size=cfg["hidden_size"],
+            num_hidden_layers=cfg["num_hidden_layers"],
+            num_attention_heads=cfg["num_attention_heads"],
+            intermediate_size=cfg["intermediate_size"],
+            max_position_embeddings=cfg["max_position_embeddings"],
+            attn_implementation="eager",
+        )
+        model = GPTNeoXForCausalLM(model_config).to(args.device)
+        model.eval()
+        print("Model on %s" % args.device, flush=True)
 
         tmp_cp = Path("/tmp/atlas-probe-checkpoint.pt")
 
         for cp_key in cp_keys:
-            step_name = Path(cp_key).stem  # step-00050
-            out_path = out_dir / ("%s.json" % step_name)
-
-            # Check if result already exists on R2
+            step_name = Path(cp_key).stem
             r2_result_key = "%s/%s.json" % (r2_out, step_name)
 
-            print("  Probing %s..." % step_name)
+            print("  Probing %s..." % step_name, end=" ", flush=True)
             t0 = time.time()
 
             # Download checkpoint
             download_r2_checkpoint(cp_key, tmp_cp)
 
-            # Load and probe
-            model, tokenizer = load_model(str(tmp_cp), args.size, args.tokenizer)
+            # Swap state_dict (stays on GPU)
+            cp = torch.load(tmp_cp, map_location=args.device, weights_only=False)
+            model.load_state_dict(cp.get("model_state_dict", cp), strict=False)
+            os.remove(tmp_cp)
+            del cp
+
+            # Probe
             results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
             classifications = classify_heads(results)
 
@@ -523,19 +544,15 @@ def main():
                 "raw_scores": results,
             }
 
+            out_path = out_dir / ("%s.json" % step_name)
             with open(out_path, "w") as f:
                 json.dump(output, f, indent=2)
 
             # Upload result to R2
             upload_r2(out_path, r2_result_key)
-
-            # Clean up
-            os.remove(tmp_cp)
             os.remove(out_path)
-            del model
-            torch.cuda.empty_cache()
 
-            print("    Done (%.1fs) -> R2: %s" % (time.time() - t0, r2_result_key))
+            print("%.1fs" % (time.time() - t0), flush=True)
 
         print("\nAll %d checkpoints probed. Results on R2 under %s" % (len(cp_keys), r2_out))
 
