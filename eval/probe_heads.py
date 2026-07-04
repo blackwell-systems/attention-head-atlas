@@ -421,7 +421,7 @@ def list_r2_checkpoints(r2_prefix):
     return sorted(keys)
 
 
-def download_r2_checkpoint(r2_key, local_path, max_retries=3):
+def download_r2_checkpoint(r2_key, local_path, max_retries=5):
     """Download a checkpoint from R2 with retries."""
     s3 = get_r2_client()
     for attempt in range(1, max_retries + 1):
