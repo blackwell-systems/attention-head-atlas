@@ -82,3 +82,29 @@ Note: "Delimiter" classification is based on dominant behavior score on structur
 - Frustration gap: forced-clean tokenization (segment at 16 barrier chars, tokenize each independently)
 - Entropy: per-head attention entropy averaged across all probe texts
 - Circuit discovery: pairwise Pearson correlation of flattened score trajectories (131 steps x 6 behaviors = 786 values per head)
+
+## Finding 7: Layer-Depth Specialization
+
+Middle layers specialize the most during training; early and late layers remain relatively stable.
+
+**Baseline**: Layers 8-12 show the largest specialization increase (+0.06 to +0.10 change from early to late training). Layer 11 has the highest final specialization index (0.568). Layer 0 actually decreases (-0.058), suggesting early layers start specialized and become more generalist.
+
+**Comparison**: More distributed. Layers 6, 20, and 22 show the largest increases. The comparison model develops specialization more evenly across depths rather than concentrating in the middle.
+
+This is consistent with the "early=syntax, mid=semantics, late=task" hypothesis: middle layers handle the most complex processing and therefore develop the strongest head specialization.
+
+## Finding 8: Polysemanticity
+
+Most heads are moderate specialists, not pure specialists or generalists:
+
+| Category | Baseline | Comparison |
+|----------|----------|------------|
+| Specialists (index > 0.7) | 31 (8.1%) | 20 (5.2%) |
+| Moderate (0.3-0.7) | 333 (86.7%) | 355 (92.4%) |
+| Generalists (< 0.3) | 20 (5.2%) | 9 (2.3%) |
+
+The merge-barrier model has fewer extreme specialists AND fewer extreme generalists. It pushes more heads into the moderate range: capable of multiple behaviors but with clear preferences. The baseline produces more extreme outcomes in both directions.
+
+Specialist-heavy layers in baseline: L3, L10, L11 (concentrated in middle). Comparison: L12 only. The baseline concentrates its specialists; the comparison distributes them.
+
+Generalist-heavy layers in baseline: L16. Comparison: none. The merge-barrier model eliminates generalist clusters entirely.
