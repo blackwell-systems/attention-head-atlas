@@ -13,7 +13,7 @@ Two training runs that differ ONLY in the tokenizer:
 | Architecture | GPT-NeoX 410M (24 layers, 16 heads, 384 total) | Same |
 | Tokenizer | standard-64k (no barriers) | structok-64k (16 merge barriers) |
 | Vocab size | ~65,536 | 65,539 |
-| Training data | SlimPajama 5GB sample | Same source corpus |
+| Training data | FineWeb 5GB sample | Same source corpus |
 | tokens.bin | Different (different tokenizer) | Different (different tokenizer) |
 | Batch size | 8 | 8 |
 | Learning rate | 3e-4 flat | 3e-4 flat |
@@ -29,7 +29,8 @@ FineWeb (HuggingFaceFW/fineweb, sample-10BT split), ~5GB sample. High-quality we
 
 - Every 50 steps for steps 0-2,000 (40 checkpoints, captures emergence)
 - Every 200 steps for steps 2,000-20,000 (90 checkpoints, captures stabilization)
-- Total: 130 checkpoints per run
+- Step 0 (random init, before any training)
+- Total: 131 checkpoints per run
 
 ## Probing
 
@@ -61,36 +62,13 @@ atlas/
     atlas-standard-64k.bin               # pretokenized corpus (standard)
     atlas-structok-64k.bin               # pretokenized corpus (barriers)
   runs/
-    baseline/
-      checkpoints/
-        step-00050.pt                    # 130 checkpoints
-        step-00100.pt
-        ...
-        step-20000.pt
-      training_log.json                  # step, loss, time for each checkpoint
-    comparison/
-      checkpoints/
-        step-00050.pt
-        ...
-        step-20000.pt
-      training_log.json
+    baseline/checkpoints/step-00000.pt through step-20000.pt   # 131 checkpoints COMPLETE
+    comparison/checkpoints/step-00000.pt through step-20000.pt # 131 checkpoints COMPLETE
+    seed2/checkpoints/                                          # 131 checkpoints PLANNED
   results/
-    baseline/
-      step-00050.json                    # probe results per checkpoint
-      step-00100.json
-      ...
-      step-20000.json
-    comparison/
-      step-00050.json
-      ...
-      step-20000.json
-  probes/
-    prose.txt                            # fixed probe texts (versioned)
-    code.txt
-    structured.txt
-    induction.txt
-    duplicates.txt
-    brackets.txt
+    baseline/step-00000.json through step-20000.json           # 131 probe results COMPLETE
+    comparison/step-00000.json through step-20000.json         # 131 probe results COMPLETE
+    seed2/                                                      # PLANNED
 ```
 
 ## Provenance
@@ -108,12 +86,39 @@ atlas/
 3. Do heads transition between types during training?
 4. When do heads "commit" to a specialization (irreversibly)?
 5. Does the merge-barrier tokenizer change the developmental sequence, not just the outcome?
+6. Is the developmental order deterministic or stochastic across random seeds?
+
+## Run 3: Seed Variation
+
+Tests whether the developmental sequence observed in baseline is deterministic (same order every time) or stochastic (seed-dependent, per Baherwani et al. 2026).
+
+| | Seed variation (seed2) |
+|---|---|
+| Architecture | GPT-NeoX 410M (same as baseline) |
+| Tokenizer | standard-64k (same as baseline) |
+| Training data | FineWeb 5GB sample (same pretokenized bin as baseline) |
+| Random init | Different (new instance, new PyTorch default init) |
+| Steps | 20,000 |
+| R2 prefix | `atlas/runs/seed2` |
+| Results prefix | `atlas/results/seed2` |
+
+Everything identical to baseline except the random number generator seed. If the developmental timeline matches baseline, the sequence is architecture-determined. If it differs, emergence is stochastic and single-run observations cannot be generalized.
 
 ## Estimated Cost
 
-- Training: ~2 hours per run on 4090 ($0.40/hr = ~$0.80)
-- Probing: ~1 hour per run (~$0.40)
-- Total for both runs: ~$2.50
+- Baseline + Comparison: ~$5 (completed)
+- Seed variation: ~$2.50
+- Total: ~$7.50
+
+## Status (2026-07-04)
+
+| Run | Training | Probing | Analysis |
+|-----|----------|---------|----------|
+| Baseline (standard BPE) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
+| Comparison (merge barriers) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
+| Seed variation (seed2) | PLANNED | PLANNED | - |
+
+All probe results also committed to `results/` in this repo. 6 visualization charts in `charts/`. Analysis scripts run locally (no GPU needed).
 
 ## Relationship to Prior Work
 
