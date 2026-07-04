@@ -360,82 +360,106 @@ def chart_seed_comparison(use_excess=False):
     save(fig, 'seed-comparison-%s' % label)
 
 
+def find_largest_circuit(run_dir):
+    """Find the largest co-specializing circuit in a run."""
+    files = sorted(run_dir.glob('step-*.json'))
+    if not files:
+        return []
+
+    score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+    num_heads = 384
+    trajectories = np.zeros((num_heads, len(files), len(score_keys)))
+
+    for t, f in enumerate(files):
+        with open(f) as fh:
+            d = json.load(fh)
+        for c in d['classifications']:
+            h_idx = c['layer'] * 16 + c['head']
+            scores = c.get('excess_scores', c.get('scores', {}))
+            for b_idx, b in enumerate(score_keys):
+                trajectories[h_idx, t, b_idx] = scores.get(b, 0)
+
+    flat = trajectories.reshape(num_heads, -1)
+    corr = np.corrcoef(flat)
+    np.fill_diagonal(corr, 0)
+
+    adj = corr > 0.9
+    visited = set()
+    circuits = []
+    for start in range(num_heads):
+        if start in visited or not adj[start].any():
+            continue
+        cluster = []
+        queue = deque([start])
+        while queue:
+            node = queue.popleft()
+            if node in visited:
+                continue
+            visited.add(node)
+            cluster.append(node)
+            for neighbor in np.where(adj[node])[0]:
+                if neighbor not in visited:
+                    queue.append(neighbor)
+        if len(cluster) >= 5:
+            circuits.append(sorted(cluster))
+
+    return max(circuits, key=len) if circuits else []
+
+
 def chart_circuit_comparison():
-    """Visualize circuit positions for baseline vs seed2."""
+    """Visualize circuit positions for all available runs."""
     runs_to_compare = []
-    for run in ['baseline-excess', 'seed2-excess']:
-        run_dir = RESULTS_DIR / run
+    for run in ['baseline', 'comparison', 'seed2', 'nl-barrier']:
+        run_dir = RESULTS_DIR / ('%s-excess' % run)
         if not run_dir.exists():
             continue
-
-        files = sorted(run_dir.glob('step-*.json'))
-        score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
-        num_heads = 384
-        trajectories = np.zeros((num_heads, len(files), len(score_keys)))
-
-        for t, f in enumerate(files):
-            with open(f) as fh:
-                d = json.load(fh)
-            for c in d['classifications']:
-                h_idx = c['layer'] * 16 + c['head']
-                scores = c.get('excess_scores', c.get('scores', {}))
-                for b_idx, b in enumerate(score_keys):
-                    trajectories[h_idx, t, b_idx] = scores.get(b, 0)
-
-        flat = trajectories.reshape(num_heads, -1)
-        corr = np.corrcoef(flat)
-        np.fill_diagonal(corr, 0)
-
-        adj = corr > 0.9
-        visited = set()
-        circuits = []
-        for start in range(num_heads):
-            if start in visited or not adj[start].any():
-                continue
-            cluster = []
-            queue = deque([start])
-            while queue:
-                node = queue.popleft()
-                if node in visited:
-                    continue
-                visited.add(node)
-                cluster.append(node)
-                for neighbor in np.where(adj[node])[0]:
-                    if neighbor not in visited:
-                        queue.append(neighbor)
-            if len(cluster) >= 5:
-                circuits.append(sorted(cluster))
-
-        largest = max(circuits, key=len) if circuits else []
-        runs_to_compare.append((run.replace('-excess', ''), largest))
+        largest = find_largest_circuit(run_dir)
+        if largest:
+            runs_to_compare.append((run, largest))
 
     if len(runs_to_compare) < 2:
         return
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+    ncols = len(runs_to_compare)
+    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 7))
+    if ncols == 1:
+        axes = [axes]
 
-    for ax, (run_name, circuit) in zip([ax1, ax2], runs_to_compare):
+    # Collect all circuits for overlap detection
+    all_circuits = {name: set(circuit) for name, circuit in runs_to_compare}
+
+    for ax, (run_name, circuit) in zip(axes, runs_to_compare):
         grid = np.zeros((24, 16))
         for h in circuit:
             grid[h // 16, h % 16] = 1.0
 
-        # Mark overlap
-        other_circuit = runs_to_compare[1][1] if run_name == runs_to_compare[0][0] else runs_to_compare[0][1]
-        overlap = set(circuit) & set(other_circuit)
+        # Mark positions shared with any other run
+        other_heads = set()
+        for other_name, other_circuit in all_circuits.items():
+            if other_name != run_name:
+                other_heads |= other_circuit
+        overlap = set(circuit) & other_heads
         for h in overlap:
             grid[h // 16, h % 16] = 2.0
 
-        cmap = plt.cm.colors.ListedColormap(['white' if LIGHT else '#1a1a1a',
-                                              RUN_COLORS.get(run_name, '#18befc'),
-                                              '#f59e0b'])
+        from matplotlib.colors import ListedColormap
+        cmap = ListedColormap(['white' if LIGHT else '#1a1a1a',
+                               RUN_COLORS.get(run_name, '#18befc'),
+                               '#f59e0b'])
         ax.imshow(grid, aspect='auto', cmap=cmap, interpolation='nearest')
-        setup_ax(ax, '%s: %d heads in largest circuit' % (run_name.capitalize(), len(circuit)),
+        setup_ax(ax, '%s: %d heads' % (run_name, len(circuit)),
                 xlabel='Head', ylabel='Layer')
         ax.set_xticks(range(0, 16, 2))
         ax.set_yticks(range(0, 24, 2))
 
-    fig.suptitle('Circuit Topology: Same Type, Different Positions\n'
-                 'Yellow = shared position (%d overlap)' % len(set(runs_to_compare[0][1]) & set(runs_to_compare[1][1])),
+    # Count total pairwise overlaps
+    total_overlap = 0
+    for i in range(len(runs_to_compare)):
+        for j in range(i + 1, len(runs_to_compare)):
+            total_overlap += len(set(runs_to_compare[i][1]) & set(runs_to_compare[j][1]))
+
+    fig.suptitle('Circuit Topology Across Runs\n'
+                 'Yellow = position shared with another run (%d total overlaps)' % total_overlap,
                 fontsize=13, fontweight='bold', color=TEXT)
     save(fig, 'circuit-comparison')
 
