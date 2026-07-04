@@ -1,4 +1,4 @@
-# Atlas Results
+# Developmental Atlas of Attention Head Specialization
 
 ## Experiment Summary
 

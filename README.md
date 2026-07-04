@@ -1,6 +1,8 @@
-# Head Atlas: Developmental Sequence of Attention Head Specialization
+# Developmental Atlas of Attention Head Specialization
 
-**A comprehensive map of when and how attention heads specialize during transformer training.**
+**Paper:** "Developmental Atlas of Attention Head Specialization: How Transformers Organize During Training and Why Circuits Protect Against Collapse"
+
+**A comprehensive map of when and how attention heads specialize during transformer training, how the tokenizer shapes that process, and why heads that wire into circuits survive while isolated heads collapse.**
 
 ## The Gap
 
@@ -85,25 +87,64 @@ For each checkpoint, for each head (24 layers x 16 heads = 384):
 3. **Extends our merge-barriers work**: the tokenizer changes the outcome (which heads develop). Does it also change the SEQUENCE?
 4. **Practical for model providers**: understanding head development could inform curriculum learning, data mixing schedules, and early stopping decisions.
 
-## Relationship to Other Work
+## Relationship to Published Work
 
-This project emerges from the merge-barriers research (github.com/blackwell-systems/merge-barriers). During that work, we measured delimiter head emergence at step ~1000 and gradient-attention coupling over 20K steps. The natural next question: what ELSE is developing simultaneously?
+This is the third paper in a research program on tokenizer-attention coupling:
+
+1. **Tokenizer-Attention Coupling** (DOI: 10.5281/zenodo.20925910): Proves BPE merge decisions permanently shape which attention heads develop. 3 domains, 2 architectures, 2 scales.
+2. **Stranded Attention** (DOI: 10.5281/zenodo.21158886): Characterizes the frustration gap: 40pp of structural attention capacity permanently locked away. 384/384 heads affected.
+3. **Developmental Atlas** (this paper): Tracks ALL head types simultaneously from step 0 to convergence. Discovers developmental circuits, P0 failure cascade, and that NL characters have 265x larger adversarial surfaces than structured data delimiters.
+
+The atlas extends both prior papers: the frustration gap is domain-dependent (0pp on web text, 40pp on structured data), but the damage mechanism still operates via P0 head collapse. It also extends Gu et al. (ICLR 2025) by answering two of their stated open questions about attention sinks.
+
+Target: cs.LG on arXiv. Standalone paper with cross-references to the prior two.
 
 ## Status (2026-07-04)
 
-- [x] Baseline training (standard BPE, 131 checkpoints on R2)
-- [x] Comparison training (merge barriers, 131 checkpoints on R2)
-- [x] Probing both runs (262 probe result JSONs on R2 and in repo)
-- [x] Excess score correction (base-rate adjusted classifications)
-- [x] Developmental circuit discovery (32/36-head delimiter circuits)
-- [x] 9 findings documented in RESULTS.md
-- [x] 11 visualization charts
-- [ ] Seed variation run (in progress)
+- [x] Baseline training + probing (131 checkpoints, standard BPE)
+- [x] Comparison training + probing (131 checkpoints, merge barriers)
+- [x] Seed variation training + probing (131 checkpoints, different init)
+- [x] Excess score correction applied to all 3 runs
+- [x] Developmental circuit discovery
+- [x] P0 deep analysis (failure cascade, circuit isolation, Gu et al. connection)
+- [x] Velocity-based circuit discovery
+- [x] NL adversarial surface analysis
+- [x] 10 findings documented in RESULTS.md
+- [x] 8 visualization charts
+- [ ] NL barriers experiment (in progress on vast.ai)
 - [ ] Structok corpus run (planned)
-- [ ] NL barriers experiment (planned)
-- [ ] Improved probe validation on step-20000
 
-9 findings so far. See RESULTS.md for the full analysis.
+## Repository Structure
+
+```
+attention-head-atlas/
+  eval/                           # Scripts
+    train_atlas.py                # Training with step-0, background R2 upload, resume
+    probe_heads.py                # 8-behavior probing + entropy + frustration gap
+    excess_score_correction.py    # Post-hoc base-rate correction
+    prep_data.py                  # FineWeb download + parallel pretokenization
+    train_nl_tokenizer.py         # Train NL-barrier tokenizer
+    run_nl_pipeline.sh            # Full NL-barrier experiment pipeline
+    ascii-adversarial-surface.py  # 43-tokenizer adversarial surface scan
+    analyze_seed2.py              # Seed variation analysis
+    analyze_p0_deep.py            # P0 failure cascade analysis
+    analyze_velocity_circuits.py  # Derivative-based circuit discovery
+  probes/                         # Probe texts (6 standard + 2 extreme)
+  results/                        # Probe results
+    baseline/                     # 131 raw results
+    baseline-excess/              # 131 excess-corrected
+    comparison/                   # 131 raw results
+    comparison-excess/            # 131 excess-corrected
+    seed2/                        # 131 raw results (new probes)
+    seed2-excess/                 # 131 excess-corrected
+  charts/                         # Visualization
+    generate_atlas.py             # Chart generation (4-run support)
+    *.png                         # 8 charts
+  references/                     # 9 prior art PDFs
+  tokenizers/                     # NL-barrier tokenizer
+  EXPERIMENT-DESIGN.md            # Design, R2 schema, roadmap
+  RESULTS.md                      # 10 findings
+```
 
 ## Repository Structure
 
