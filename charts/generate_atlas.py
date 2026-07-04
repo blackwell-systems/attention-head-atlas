@@ -3,13 +3,13 @@
 Generate atlas visualization charts from probe results.
 
 Produces publication-quality charts from the developmental atlas data.
-Supports both raw and excess-corrected results.
+Supports raw and excess-corrected results, three runs (baseline, comparison, seed2).
 
 Usage:
-    python generate_atlas.py                    # light theme (default)
+    python generate_atlas.py                    # light theme, excess scores
     python generate_atlas.py --dark             # dark theme
-    python generate_atlas.py --use-excess       # use excess-corrected data
     python generate_atlas.py --both-themes      # generate both variants
+    python generate_atlas.py --both-scores      # generate raw and excess
 """
 
 import argparse
@@ -19,6 +19,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
+from collections import deque
 
 RESULTS_DIR = Path(__file__).parent.parent / 'results'
 CHARTS_DIR = Path(__file__).parent
@@ -32,6 +33,17 @@ COLORS = {
     'positional_p0': '#ff4444',
     'induction': '#f59e0b',
     'unclassified': '#888888',
+}
+
+RUN_COLORS = {
+    'baseline': '#ff4444',
+    'comparison': '#18befc',
+    'seed2': '#22c55e',
+}
+RUN_LABELS = {
+    'baseline': 'Baseline (standard BPE)',
+    'comparison': 'Comparison (merge barriers)',
+    'seed2': 'Seed2 (standard BPE, different init)',
 }
 
 # Theme globals
@@ -81,6 +93,19 @@ def save(fig, name):
     print('  %s' % name)
 
 
+def get_run_dir(run, use_excess):
+    """Get results directory for a run."""
+    if use_excess:
+        return RESULTS_DIR / ('%s-excess' % run)
+    return RESULTS_DIR / run
+
+
+def run_exists(run, use_excess):
+    """Check if a run's results exist."""
+    d = get_run_dir(run, use_excess)
+    return d.exists() and len(list(d.glob('step-*.json'))) > 0
+
+
 def load_timeline(run_dir):
     """Load all probe results for a run, return structured timeline data."""
     files = sorted(run_dir.glob('step-*.json'))
@@ -121,22 +146,31 @@ def load_timeline(run_dir):
     return steps, type_counts, avg_spec, avg_entropy, np.array(layer_spec)
 
 
+def get_available_runs(use_excess):
+    """Return list of runs that have data."""
+    runs = []
+    for run in ['baseline', 'comparison', 'seed2']:
+        if run_exists(run, use_excess):
+            runs.append(run)
+    return runs
+
+
+# ── Charts ──
+
 def chart_developmental_timeline(use_excess=False):
     """Stacked area chart of head type distribution over training."""
     label = 'excess' if use_excess else 'raw'
-    b_dir = RESULTS_DIR / ('baseline-excess' if use_excess else 'baseline')
-    c_dir = RESULTS_DIR / ('comparison-excess' if use_excess else 'comparison')
+    runs = get_available_runs(use_excess)
+    ncols = len(runs)
 
-    b_steps, b_types, _, _, _ = load_timeline(b_dir)
-    c_steps, c_types, _, _, _ = load_timeline(c_dir)
+    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 6))
+    if ncols == 1:
+        axes = [axes]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-
-    for ax, steps, tc, title in [
-        (ax1, b_steps, b_types, 'Baseline (standard BPE)'),
-        (ax2, c_steps, c_types, 'Comparison (merge barriers)'),
-    ]:
-        setup_ax(ax, title, xlabel='Training step', ylabel='Number of heads')
+    for ax, run in zip(axes, runs):
+        run_dir = get_run_dir(run, use_excess)
+        steps, tc, _, _, _ = load_timeline(run_dir)
+        setup_ax(ax, RUN_LABELS.get(run, run), xlabel='Training step', ylabel='Number of heads')
         bottom = np.zeros(len(steps))
         for b in BEHAVIORS:
             vals = np.array(tc[b])
@@ -144,7 +178,7 @@ def chart_developmental_timeline(use_excess=False):
                            color=COLORS[b], label=b)
             bottom += vals
         ax.set_ylim(0, 384)
-        ax.legend(loc='center right', fontsize=8, facecolor=LEGEND_BG,
+        ax.legend(loc='center right', fontsize=7, facecolor=LEGEND_BG,
                  edgecolor=GRID, labelcolor=TEXT)
 
     fig.suptitle('Attention Head Atlas: Developmental Timeline (%s scores)' % label,
@@ -152,86 +186,83 @@ def chart_developmental_timeline(use_excess=False):
     save(fig, 'developmental-timeline-%s' % label)
 
 
-def chart_entropy_divergence(use_excess=False):
-    """Attention entropy over training for both runs."""
-    b_dir = RESULTS_DIR / ('baseline-excess' if use_excess else 'baseline')
-    c_dir = RESULTS_DIR / ('comparison-excess' if use_excess else 'comparison')
-
-    b_steps, _, _, b_ent, _ = load_timeline(b_dir)
-    c_steps, _, _, c_ent, _ = load_timeline(c_dir)
+def chart_entropy_three_way(use_excess=False):
+    """Attention entropy over training for all runs."""
+    runs = get_available_runs(use_excess)
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    setup_ax(ax, 'Attention Entropy Over Training\nBaseline becomes diffuse; merge barriers stay focused',
+    setup_ax(ax, 'Attention Entropy Over Training\nEntropy trajectory is seed-independent; merge barriers stay focused',
              xlabel='Training step', ylabel='Mean attention entropy')
-    ax.plot(b_steps, b_ent, color='#ff4444', linewidth=2, label='Baseline (standard BPE)')
-    ax.plot(c_steps, c_ent, color='#18befc', linewidth=2, label='Comparison (merge barriers)')
-    ax.legend(fontsize=10, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
-    save(fig, 'entropy-divergence')
+
+    for run in runs:
+        run_dir = get_run_dir(run, use_excess)
+        steps, _, _, ent, _ = load_timeline(run_dir)
+        ax.plot(steps, ent, color=RUN_COLORS[run], linewidth=2,
+               label=RUN_LABELS.get(run, run))
+
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+    save(fig, 'entropy-three-way')
 
 
 def chart_p0_emergence(use_excess=False):
     """P0 sink head count over training."""
-    b_dir = RESULTS_DIR / ('baseline-excess' if use_excess else 'baseline')
-    c_dir = RESULTS_DIR / ('comparison-excess' if use_excess else 'comparison')
-
-    b_steps, b_types, _, _, _ = load_timeline(b_dir)
-    c_steps, c_types, _, _, _ = load_timeline(c_dir)
+    label = 'excess' if use_excess else 'raw'
+    runs = get_available_runs(use_excess)
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    setup_ax(ax, 'Dormant Head Emergence: Merge Barriers Reduce Dormancy',
+    setup_ax(ax, 'Dormant Head Emergence',
              xlabel='Training step', ylabel='P0 sink heads')
-    ax.plot(b_steps, b_types['positional_p0'], color='#ff4444', linewidth=2,
-           label='Baseline (standard BPE)')
-    ax.plot(c_steps, c_types['positional_p0'], color='#18befc', linewidth=2,
-           label='Comparison (merge barriers)')
-    ax.legend(fontsize=10, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
 
-    label = 'excess' if use_excess else 'raw'
+    for run in runs:
+        run_dir = get_run_dir(run, use_excess)
+        steps, tc, _, _, _ = load_timeline(run_dir)
+        ax.plot(steps, tc['positional_p0'], color=RUN_COLORS[run], linewidth=2,
+               label=RUN_LABELS.get(run, run))
+
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
     save(fig, 'p0-sink-emergence-%s' % label)
 
 
 def chart_specialization_index(use_excess=False):
     """Mean specialization index over training."""
-    b_dir = RESULTS_DIR / ('baseline-excess' if use_excess else 'baseline')
-    c_dir = RESULTS_DIR / ('comparison-excess' if use_excess else 'comparison')
-
-    b_steps, _, b_spec, _, _ = load_timeline(b_dir)
-    c_steps, _, c_spec, _, _ = load_timeline(c_dir)
+    label = 'excess' if use_excess else 'raw'
+    runs = get_available_runs(use_excess)
 
     fig, ax = plt.subplots(figsize=(10, 6))
     setup_ax(ax, 'Head Specialization Over Training',
              xlabel='Training step', ylabel='Mean specialization index')
-    ax.plot(b_steps, b_spec, color='#ff4444', linewidth=2, label='Baseline (standard BPE)')
-    ax.plot(c_steps, c_spec, color='#18befc', linewidth=2, label='Comparison (merge barriers)')
-    ax.legend(fontsize=10, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
 
-    label = 'excess' if use_excess else 'raw'
+    for run in runs:
+        run_dir = get_run_dir(run, use_excess)
+        steps, _, spec, _, _ = load_timeline(run_dir)
+        ax.plot(steps, spec, color=RUN_COLORS[run], linewidth=2,
+               label=RUN_LABELS.get(run, run))
+
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
     save(fig, 'specialization-index-%s' % label)
 
 
 def chart_layer_depth(use_excess=False):
     """Heatmap of per-layer specialization index over training."""
-    b_dir = RESULTS_DIR / ('baseline-excess' if use_excess else 'baseline')
-    c_dir = RESULTS_DIR / ('comparison-excess' if use_excess else 'comparison')
+    label = 'excess' if use_excess else 'raw'
+    runs = get_available_runs(use_excess)
+    ncols = len(runs)
 
-    b_steps, _, _, _, b_layer = load_timeline(b_dir)
-    c_steps, _, _, _, c_layer = load_timeline(c_dir)
+    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 8))
+    if ncols == 1:
+        axes = [axes]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-
-    for ax, layer_spec, steps, title in [
-        (ax1, b_layer, b_steps, 'Baseline'),
-        (ax2, c_layer, c_steps, 'Comparison'),
-    ]:
+    for ax, run in zip(axes, runs):
+        run_dir = get_run_dir(run, use_excess)
+        steps, _, _, _, layer_spec = load_timeline(run_dir)
         im = ax.imshow(layer_spec.T, aspect='auto', cmap='viridis',
                        extent=[steps[0], steps[-1], 23.5, -0.5],
                        interpolation='nearest')
-        setup_ax(ax, '%s: Specialization by Layer' % title,
+        setup_ax(ax, RUN_LABELS.get(run, run).split('(')[0].strip(),
                 xlabel='Training step', ylabel='Layer')
-        plt.colorbar(im, ax=ax, label='Mean specialization index')
+        plt.colorbar(im, ax=ax, label='Spec. index')
 
-    label = 'excess' if use_excess else 'raw'
-    fig.suptitle('Layer-Depth Specialization Over Training (%s scores)' % label,
+    fig.suptitle('Layer-Depth Specialization (%s scores)' % label,
                 fontsize=14, fontweight='bold', color=TEXT)
     save(fig, 'layer-depth-specialization-%s' % label)
 
@@ -239,14 +270,15 @@ def chart_layer_depth(use_excess=False):
 def chart_polysemanticity(use_excess=False):
     """Specialist vs generalist head counts over training."""
     label = 'excess' if use_excess else 'raw'
+    runs = get_available_runs(use_excess)
+    ncols = len(runs)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    fig, axes = plt.subplots(1, ncols, figsize=(5 * ncols, 6))
+    if ncols == 1:
+        axes = [axes]
 
-    for ax, run, title in [
-        (ax1, 'baseline-excess' if use_excess else 'baseline', 'Baseline'),
-        (ax2, 'comparison-excess' if use_excess else 'comparison', 'Comparison'),
-    ]:
-        run_dir = RESULTS_DIR / run
+    for ax, run in zip(axes, runs):
+        run_dir = get_run_dir(run, use_excess)
         files = sorted(run_dir.glob('*.json'))
         steps = []
         specialists = []
@@ -263,25 +295,161 @@ def chart_polysemanticity(use_excess=False):
             specialists.append(spec_count)
             generalists.append(gen_count)
 
-        setup_ax(ax, title, xlabel='Training step', ylabel='Number of heads')
+        short_label = RUN_LABELS.get(run, run).split('(')[0].strip()
+        setup_ax(ax, short_label, xlabel='Training step', ylabel='Number of heads')
         ax.plot(steps, specialists, color='#18befc', linewidth=2, label='Specialists (>0.7)')
         ax.plot(steps, generalists, color='#ff9944', linewidth=2, label='Generalists (<0.3)')
         ax.fill_between(steps, 0, specialists, alpha=0.1, color='#18befc')
         ax.fill_between(steps, 0, generalists, alpha=0.1, color='#ff9944')
-        ax.legend(fontsize=10, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+        ax.legend(fontsize=8, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
 
     fig.suptitle('Polysemanticity: Specialists vs Generalists (%s scores)' % label,
                 fontsize=14, fontweight='bold', color=TEXT)
     save(fig, 'polysemanticity-%s' % label)
 
 
+def chart_seed_comparison(use_excess=False):
+    """Bar chart comparing baseline vs seed2 head type distribution at step 20000."""
+    label = 'excess' if use_excess else 'raw'
+    b_dir = get_run_dir('baseline', use_excess)
+    s_dir = get_run_dir('seed2', use_excess)
+
+    if not b_dir.exists() or not s_dir.exists():
+        return
+
+    with open(b_dir / 'step-20000.json') as f:
+        b_data = json.load(f)
+    with open(s_dir / 'step-20000.json') as f:
+        s_data = json.load(f)
+
+    b_counts = {b: 0 for b in BEHAVIORS}
+    s_counts = {b: 0 for b in BEHAVIORS}
+    for c in b_data['classifications']:
+        dom = c['dominant']
+        if dom in b_counts:
+            b_counts[dom] += 1
+        else:
+            b_counts['unclassified'] += 1
+    for c in s_data['classifications']:
+        dom = c['dominant']
+        if dom in s_counts:
+            s_counts[dom] += 1
+        else:
+            s_counts['unclassified'] += 1
+
+    # Correlation
+    b_vals = [b_counts[b] for b in BEHAVIORS]
+    s_vals = [s_counts[b] for b in BEHAVIORS]
+    corr = np.corrcoef(b_vals, s_vals)[0, 1]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    setup_ax(ax, 'Seed Variation: Same Tokenizer, Different Init (r=%.3f)\n%s scores at step 20000' % (corr, label),
+             ylabel='Number of heads')
+
+    x = np.arange(len(BEHAVIORS))
+    width = 0.35
+    edge = GRID if LIGHT else BG
+    ax.bar(x - width/2, b_vals, width, label='Baseline', color='#ff4444', edgecolor=edge, linewidth=0.5)
+    ax.bar(x + width/2, s_vals, width, label='Seed2', color='#22c55e', edgecolor=edge, linewidth=0.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(BEHAVIORS, fontsize=9, rotation=15, ha='right')
+    ax.legend(fontsize=10, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    save(fig, 'seed-comparison-%s' % label)
+
+
+def chart_circuit_comparison():
+    """Visualize circuit positions for baseline vs seed2."""
+    runs_to_compare = []
+    for run in ['baseline-excess', 'seed2-excess']:
+        run_dir = RESULTS_DIR / run
+        if not run_dir.exists():
+            continue
+
+        files = sorted(run_dir.glob('step-*.json'))
+        score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+        num_heads = 384
+        trajectories = np.zeros((num_heads, len(files), len(score_keys)))
+
+        for t, f in enumerate(files):
+            with open(f) as fh:
+                d = json.load(fh)
+            for c in d['classifications']:
+                h_idx = c['layer'] * 16 + c['head']
+                scores = c.get('excess_scores', c.get('scores', {}))
+                for b_idx, b in enumerate(score_keys):
+                    trajectories[h_idx, t, b_idx] = scores.get(b, 0)
+
+        flat = trajectories.reshape(num_heads, -1)
+        corr = np.corrcoef(flat)
+        np.fill_diagonal(corr, 0)
+
+        adj = corr > 0.9
+        visited = set()
+        circuits = []
+        for start in range(num_heads):
+            if start in visited or not adj[start].any():
+                continue
+            cluster = []
+            queue = deque([start])
+            while queue:
+                node = queue.popleft()
+                if node in visited:
+                    continue
+                visited.add(node)
+                cluster.append(node)
+                for neighbor in np.where(adj[node])[0]:
+                    if neighbor not in visited:
+                        queue.append(neighbor)
+            if len(cluster) >= 5:
+                circuits.append(sorted(cluster))
+
+        largest = max(circuits, key=len) if circuits else []
+        runs_to_compare.append((run.replace('-excess', ''), largest))
+
+    if len(runs_to_compare) < 2:
+        return
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+
+    for ax, (run_name, circuit) in zip([ax1, ax2], runs_to_compare):
+        grid = np.zeros((24, 16))
+        for h in circuit:
+            grid[h // 16, h % 16] = 1.0
+
+        # Mark overlap
+        other_circuit = runs_to_compare[1][1] if run_name == runs_to_compare[0][0] else runs_to_compare[0][1]
+        overlap = set(circuit) & set(other_circuit)
+        for h in overlap:
+            grid[h // 16, h % 16] = 2.0
+
+        cmap = plt.cm.colors.ListedColormap(['white' if LIGHT else '#1a1a1a',
+                                              RUN_COLORS.get(run_name, '#18befc'),
+                                              '#f59e0b'])
+        ax.imshow(grid, aspect='auto', cmap=cmap, interpolation='nearest')
+        setup_ax(ax, '%s: %d heads in largest circuit' % (run_name.capitalize(), len(circuit)),
+                xlabel='Head', ylabel='Layer')
+        ax.set_xticks(range(0, 16, 2))
+        ax.set_yticks(range(0, 24, 2))
+
+    fig.suptitle('Circuit Topology: Same Type, Different Positions\n'
+                 'Yellow = shared position (%d overlap)' % len(set(runs_to_compare[0][1]) & set(runs_to_compare[1][1])),
+                fontsize=13, fontweight='bold', color=TEXT)
+    save(fig, 'circuit-comparison')
+
+
 ALL_CHARTS = [
     chart_developmental_timeline,
-    chart_entropy_divergence,
+    chart_entropy_three_way,
     chart_p0_emergence,
     chart_specialization_index,
     chart_layer_depth,
     chart_polysemanticity,
+    chart_seed_comparison,
+]
+
+STANDALONE_CHARTS = [
+    chart_circuit_comparison,
 ]
 
 
@@ -303,9 +471,10 @@ if __name__ == '__main__':
             label = 'excess' if use_excess else 'raw'
             print('Generating charts (%s, %s scores)...' % (tag, label))
             for fn in ALL_CHARTS:
-                if fn == chart_entropy_divergence:
-                    fn()  # entropy doesn't change with excess correction
-                else:
-                    fn(use_excess=use_excess)
+                fn(use_excess=use_excess)
+
+        # Standalone charts (not score-dependent)
+        for fn in STANDALONE_CHARTS:
+            fn()
 
     print('Done.')
