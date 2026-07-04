@@ -116,9 +116,36 @@ Everything identical to baseline except the random number generator seed. If the
 |-----|----------|---------|----------|
 | Baseline (standard BPE) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
 | Comparison (merge barriers) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
-| Seed variation (seed2) | PLANNED | PLANNED | - |
+| Seed variation (seed2) | IN PROGRESS | PLANNED (local, after training) | - |
 
 All probe results also committed to `results/` in this repo. 6 visualization charts in `charts/`. Analysis scripts run locally (no GPU needed).
+
+## Roadmap
+
+### Next: Structok Corpus Atlas (Run 4)
+
+Run the atlas on the structok corpus (14% JSON, 8% GCF, 13% code) instead of FineWeb. Same methodology, same checkpoint schedule, different corpus. The frustration gap should appear on this corpus, and we'd see exactly WHEN it emerges at 50-step granularity. This directly extends the stranded paper from 8 data points to 130.
+
+The FineWeb atlas and the structok-corpus atlas together tell the full story: "the developmental sequence is similar but the frustration gap only appears when structured data is present in training."
+
+Estimated cost: ~$2.50. Requires the structok corpus pretokenized bins (already on R2 from merge-barriers experiments).
+
+### Fix: Excess Score Correction (post-hoc, free)
+
+The current classification uses raw scores, not excess scores. The merge-barriers paper solved this exact problem with the excess score methodology: subtract the base rate of delimiter positions from the raw delimiter attention. A head that scores 0.30 on delimiter when 0.30 of positions are delimiters has excess 0.00 (no specialization). A head that scores 0.30 when 0.10 of positions are delimiters has excess 0.20 (genuine specialist).
+
+Apply the same correction to all behavior types. For each probe text, compute the base rate for each behavior (what fraction of positions are delimiter positions, what fraction are duplicate tokens, etc.) and subtract.
+
+This is a post-hoc recomputation on the existing data. No new experiments needed. The raw scores in the JSONs contain everything required. This fix improves both the head type classification accuracy and sharpens the specialization index (removes base-rate inflation that makes everything look moderate).
+
+### Fix: Extreme Probe Texts (re-probe step-20000 only)
+
+Add more probe texts with extreme characteristics to separate specialists from generalists:
+- A probe with zero delimiters (pure prose, no punctuation)
+- A probe with very high delimiter density (dense JSON or GCF)
+- A probe designed to maximally trigger induction (long repeated sequences)
+
+The current 6 probes all contain moderate amounts of everything. Extreme probes would produce clearer specialization signals. Only requires re-probing the step-20000 checkpoint to validate the methodology, not all 131.
 
 ## Relationship to Prior Work
 
