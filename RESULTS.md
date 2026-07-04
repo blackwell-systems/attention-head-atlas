@@ -109,6 +109,33 @@ The merge-barrier model has fewer extreme specialists AND fewer extreme generali
 - Entropy: per-head attention entropy averaged across all probe texts
 - Circuit discovery: pairwise Pearson correlation of flattened score trajectories (131 steps x 6 behaviors = 786 values per head)
 
+## Finding 9: Natural Language Has a Larger Adversarial Surface Than Structured Data
+
+Reanalysis of the 43-tokenizer adversarial surface scan (from the merge-barriers paper) reveals that natural language structural characters have far larger adversarial surfaces than the structured data characters the original research focused on:
+
+| Character | Mergeable words | Role | Comparison to pipe (24) |
+|-----------|----------------|------|------------------------|
+| `.` (period) | 6,366 | Sentence boundaries | 265x |
+| `-` (hyphen) | 2,886 | Compound words, ranges | 120x |
+| `(` (open paren) | 2,353 | Parenthetical clauses | 98x |
+| `'` (apostrophe) | 706 | Contractions, possessives | 29x |
+| `:` (colon) | 232 | Clause introduction | 10x |
+| `"` (quote) | 193 | Dialogue, quotation | 8x |
+| `)` (close paren) | 184 | Parenthetical close | 8x |
+| `;` (semicolon) | 57 | Clause separation | 2x |
+| `?` (question mark) | 50 | Question boundaries | 2x |
+| `!` (exclamation) | 30 | Emphasis boundaries | 1.3x |
+
+For comparison: pipe (GCF) has 24 mergeable words. Tab (TOON) has 1,238. JSON's quote has 193.
+
+**Period alone has a 265x larger adversarial surface than pipe.** Every sentence boundary in every tokenizer vocabulary has thousands of merged entries where the period fuses with the following word (`.the`, `.and`, `.this`, etc.). Every compound word merges the hyphen (`self-`, `well-`, `non-`). Every contraction merges the apostrophe (`'t`, `'s`, `'re`).
+
+The reason this hasn't been noticed: natural language structure is redundant. A missing sentence boundary can be inferred from capitalization and context. A missing field boundary in JSON cannot. But the attention capacity wasted on boundary recovery is proportional to the adversarial surface, not to the downstream error rate. If the model spends capacity recovering 6,366 merged period boundaries, that capacity is unavailable for content processing, even if the model ultimately recovers the boundaries correctly.
+
+This suggests merge barriers may be a universal principle for language modeling, not just a structured data optimization. NL-specific barriers on period, hyphen, apostrophe, and parentheses would prevent the merges that create the largest adversarial surfaces in natural language. No prior work has tested this.
+
+Source data: `results/ascii-adversarial-surface-43-tokenizers-20260625.json` (43 tokenizers, 94 printable ASCII characters).
+
 ## Known Limitations
 
 1. **Probe quality**: The brackets probe used in data collection was degenerate (100% delimiter characters). The excess correction compensates, but improved probes have been written for future runs. Validation on step-20000 pending.
