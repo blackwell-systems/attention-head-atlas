@@ -376,17 +376,17 @@ def classify_heads(results, num_layers=24, num_heads=16):
             confidence = scores[dominant] / total
 
             # "None of the above": all scores below threshold
-            is_unclassified = max(score_vals) < 0.05
+            is_unclassified = bool(max(score_vals) < 0.05)
 
             classifications.append({
                 "layer": layer,
                 "head": head,
                 "dominant": "unclassified" if is_unclassified else dominant,
-                "confidence": round(confidence, 4),
-                "specialization_index": round(spec_index, 4),
-                "entropy": round(entropy, 4),
+                "confidence": round(float(confidence), 4),
+                "specialization_index": round(float(spec_index), 4),
+                "entropy": round(float(entropy), 4),
                 "unclassified": is_unclassified,
-                "scores": {k: round(v, 4) for k, v in scores.items()},
+                "scores": {k: round(float(v), 4) for k, v in scores.items()},
             })
 
     return classifications
