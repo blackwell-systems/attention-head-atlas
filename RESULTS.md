@@ -250,6 +250,10 @@ See Finding 2 for detailed connection. We answer both of their stated open quest
 
 Closest to our atlas concept. They tracked head differentiation using the refined local learning coefficient (rLLC) and found a staged developmental order: bigrams first, then n-grams, then previous-token, then induction. But they used a 2-layer attention-only toy model. We replicate at realistic scale (24 layers, 16 heads, 410M parameters) and add the tokenizer variable.
 
+### Aoyama, Wilcox & Schneider (2026): "Predicting the Emergence of Induction Heads"
+
+Derived a predictive equation for when induction heads form based on batch size and context size. Showed bigram repetition frequency and reliability control the phase transition. Uses 2-layer 50M models with 30 checkpoints each. They note vocabulary size "will likely affect the emergence points" but don't test this. We implicitly test it via tokenizer variation (merge barriers change the effective token distribution). Our induction emergence at step 150 across both seeds is consistent with their finding that emergence timing is model-size-agnostic. Their single-behavior phase transition analysis complements our multi-behavior developmental tracking.
+
 ### Baherwani et al. (2026): "Emergent Capabilities Arise Randomly"
 
 Found emergence is stochastic across seeds on synthetic tasks. Our Finding 10 confirms this at realistic scale: distribution correlation 0.794 across seeds, circuits form the same type but at different positions.
