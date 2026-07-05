@@ -1,0 +1,52 @@
+{
+  "baseline": {
+    "mean": 314278.2508962342,
+    "per_text": {
+      "prose": 885.9256358904064,
+      "code": 2091.2472111749685,
+      "structured": 2190806.0264848815,
+      "induction": 2996.6662482126376,
+      "duplicates": 346.4857664273703,
+      "brackets": 1914.4883332929478,
+      "prose_punctuated": 906.9165937598648
+    }
+  },
+  "spacing_ablation": {
+    "heads": 128,
+    "mean": 63412.554688448545,
+    "delta_pct": -79.82,
+    "per_text": {
+      "prose": 1092.36247881805,
+      "code": 1658.2339263563679,
+      "structured": 432341.74301235523,
+      "induction": 5899.668959588766,
+      "duplicates": 373.73759878050896,
+      "brackets": 1510.876251836543,
+      "prose_punctuated": 1011.260591404415
+    }
+  },
+  "p0_ablation": {
+    "heads": 180,
+    "mean": 166864.16075708388,
+    "delta_pct": -46.91,
+    "per_text": {
+      "prose": 1007.0212618333433,
+      "code": 1420.2867449357823,
+      "structured": 1161290.1162455888,
+      "induction": 363.21977330279145,
+      "duplicates": 1644.2141896143812,
+      "brackets": 1317.4220350124317,
+      "prose_punctuated": 1006.8450492997978
+    }
+  },
+  "random_controls": {
+    "n_trials": 3,
+    "heads_per_trial": 128,
+    "deltas_pct": [
+      -60.81,
+      -20.61,
+      -53.41
+    ],
+    "mean_delta_pct": -44.94
+  }
+}

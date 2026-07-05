@@ -117,6 +117,7 @@ def main():
     parser.add_argument("--output-dir", required=True, help="Local output directory for checkpoints")
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--seq-length", type=int, default=2048)
+    parser.add_argument("--arch", default="neox", choices=["neox", "llama"], help="Model architecture")
     parser.add_argument("--skip-upload", action="store_true", help="Skip R2 upload after training")
     parser.add_argument("--resume-from", type=str, help="Path to checkpoint to resume from (or 'r2' to download latest from R2)")
     args = parser.parse_args()
@@ -134,17 +135,32 @@ def main():
     vocab_size = tok.get_vocab_size()
 
     # Create model
-    from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
-    config = GPTNeoXConfig(
-        vocab_size=vocab_size,
-        hidden_size=1024,
-        num_hidden_layers=24,
-        num_attention_heads=16,
-        intermediate_size=4096,
-        max_position_embeddings=2048,
-        use_cache=False,
-    )
-    model = GPTNeoXForCausalLM(config).to(device)
+    if args.arch == "llama":
+        from transformers import LlamaConfig, LlamaForCausalLM
+        config = LlamaConfig(
+            vocab_size=vocab_size,
+            hidden_size=1024,
+            num_hidden_layers=24,
+            num_attention_heads=16,
+            num_key_value_heads=4,
+            intermediate_size=2816,
+            max_position_embeddings=2048,
+            rope_theta=500000.0,
+            use_cache=False,
+        )
+        model = LlamaForCausalLM(config).to(device)
+    else:
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        config = GPTNeoXConfig(
+            vocab_size=vocab_size,
+            hidden_size=1024,
+            num_hidden_layers=24,
+            num_attention_heads=16,
+            intermediate_size=4096,
+            max_position_embeddings=2048,
+            use_cache=False,
+        )
+        model = GPTNeoXForCausalLM(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
 
     # Resume from checkpoint if specified
