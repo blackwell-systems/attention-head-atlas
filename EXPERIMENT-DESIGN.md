@@ -326,6 +326,38 @@ COMPLETE. Corrected results in `results/{run}-excess/` for all 4 runs. See RESUL
 
 COMPLETE. Improved probes (real bracketed code, standardized lengths, punctuation-stripped prose) used for seed2 and NL-barrier runs. Baseline and comparison used original probes; excess correction normalizes across probe sets.
 
+## Future Roadmap (toward universality)
+
+The current program scores ~91/100. The gap to 100 is proving the capacity tax is universal across architectures and scales. Four experiments would close every possible objection:
+
+### 1. Architecture replication: Llama with GQA
+
+Run the atlas on Llama 410M (GQA, RoPE, SwiGLU, RMSNorm) with the same methodology. The coupling paper validates the merge-barrier mechanism on Llama, but nobody has measured spacing on GQA. If Llama also shows ~45% spacing, the claim becomes architecture-independent with direct evidence, not just inference from companion papers. GQA's shared key-value projections may affect spacing count (fewer independent heads per KV group). The result either confirms universality or reveals an architecture-dependent effect, both valuable.
+
+**Cost:** ~$3 (1 training run + probing). Uses existing Llama checkpoints from the coupling paper if available, or trains a new one.
+
+### 2. Scale replication: 1.3B
+
+Does spacing persist at 1.3B? The coupling paper shows stranding scales (13% to 21% delimiter heads from 410M to 1.3B). If spacing also stays at ~45% or scales similarly, the capacity tax claim extends to production-relevant model sizes. The 1.3B Llama Model B checkpoint already exists on R2 from the stranded attention experiments. Probing it with the 7-behavior taxonomy requires only inference.
+
+**Cost:** ~$0.50 (inference only on existing checkpoint). No training needed.
+
+### 3. Downstream task impact
+
+The ablation measures PPL change, not task accuracy. Showing that merge barriers improve actual benchmark scores (MMLU, HumanEval, structured data comprehension tasks) would connect the capacity tax to metrics model providers already track. This bridges the gap between "heads are reallocated" and "the reallocation matters for performance."
+
+**Cost:** Depends on benchmark suite. Evaluation only, no training.
+
+### 4. Causal circuit intervention
+
+The circuit protection finding is correlational (100% P0 isolation). To make it causal: artificially couple an isolated head into a circuit during training (e.g., by adding a regularization term that correlates its trajectory with a circuit member) and show it survives instead of collapsing into P0. This would establish that circuits are causally protective, not merely co-occurring with survival.
+
+**Cost:** Requires custom training loop modification. Moderate effort.
+
+### Priority order
+
+Experiment 2 (1.3B spacing probe) is the highest-value, lowest-cost next step. The checkpoint exists. The probe script exists. One inference run answers whether spacing scales. If it does, that single data point eliminates the most common objection to the paper.
+
 ## Relationship to Prior Work
 
 This project extends the merge-barriers research (DOI: 10.5281/zenodo.20925910). During that work, we measured delimiter head emergence at step ~1,000 and gradient-attention coupling over 20K steps. The atlas asks: what ELSE is developing simultaneously, and does the tokenizer change the sequence?
