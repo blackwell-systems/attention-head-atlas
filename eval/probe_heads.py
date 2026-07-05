@@ -74,6 +74,26 @@ MODEL_CONFIGS = {
         "max_position_embeddings": 2048,
         "arch": "neox",
     },
+    "410m-llama": {
+        "hidden_size": 1024,
+        "num_hidden_layers": 24,
+        "num_attention_heads": 16,
+        "num_key_value_heads": 4,
+        "intermediate_size": 2816,
+        "max_position_embeddings": 2048,
+        "rope_theta": 500000.0,
+        "arch": "llama",
+    },
+    "1.3b-llama": {
+        "hidden_size": 2048,
+        "num_hidden_layers": 24,
+        "num_attention_heads": 32,
+        "num_key_value_heads": 8,
+        "intermediate_size": 5632,
+        "max_position_embeddings": 2048,
+        "rope_theta": 500000.0,
+        "arch": "llama",
+    },
 }
 
 DELIMITER_CHARS = set('|@<>"\',:;\t\n{}[]()')
@@ -89,22 +109,38 @@ MIN_DISK_BYTES = 3 * 1024 * 1024 * 1024
 
 def load_model(checkpoint_path, size, tokenizer_path):
     from tokenizers import Tokenizer
-    from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
 
     tok = Tokenizer.from_file(tokenizer_path)
     vocab_size = tok.get_vocab_size()
     config = MODEL_CONFIGS[size]
+    arch = config.get("arch", "neox")
 
-    model_config = GPTNeoXConfig(
-        vocab_size=vocab_size,
-        hidden_size=config["hidden_size"],
-        num_hidden_layers=config["num_hidden_layers"],
-        num_attention_heads=config["num_attention_heads"],
-        intermediate_size=config["intermediate_size"],
-        max_position_embeddings=config["max_position_embeddings"],
-        attn_implementation="eager",
-    )
-    model = GPTNeoXForCausalLM(model_config)
+    if arch == "llama":
+        from transformers import LlamaConfig, LlamaForCausalLM
+        model_config = LlamaConfig(
+            vocab_size=vocab_size,
+            hidden_size=config["hidden_size"],
+            num_hidden_layers=config["num_hidden_layers"],
+            num_attention_heads=config["num_attention_heads"],
+            num_key_value_heads=config.get("num_key_value_heads", config["num_attention_heads"]),
+            intermediate_size=config["intermediate_size"],
+            max_position_embeddings=config["max_position_embeddings"],
+            rope_theta=config.get("rope_theta", 10000.0),
+            attn_implementation="eager",
+        )
+        model = LlamaForCausalLM(model_config)
+    else:
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        model_config = GPTNeoXConfig(
+            vocab_size=vocab_size,
+            hidden_size=config["hidden_size"],
+            num_hidden_layers=config["num_hidden_layers"],
+            num_attention_heads=config["num_attention_heads"],
+            intermediate_size=config["intermediate_size"],
+            max_position_embeddings=config["max_position_embeddings"],
+            attn_implementation="eager",
+        )
+        model = GPTNeoXForCausalLM(model_config)
 
     cp = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     state_dict = cp.get("model_state_dict", cp)
@@ -602,7 +638,9 @@ def main():
         print("  Done (%.1fs)" % (time.time() - t0))
 
         print("Classifying heads...")
-        classifications = classify_heads(results)
+        classifications = classify_heads(results,
+            num_layers=MODEL_CONFIGS[args.size]["num_hidden_layers"],
+            num_heads=MODEL_CONFIGS[args.size]["num_attention_heads"])
 
         type_counts = {}
         for c in classifications:
@@ -700,22 +738,40 @@ def main():
 
         # Create model ONCE on GPU, swap state_dict per checkpoint
         from tokenizers import Tokenizer as Tok
-        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
         tokenizer = Tok.from_file(args.tokenizer)
         vocab_size = tokenizer.get_vocab_size()
         cfg = MODEL_CONFIGS[args.size]
-        model_config = GPTNeoXConfig(
-            vocab_size=vocab_size,
-            hidden_size=cfg["hidden_size"],
-            num_hidden_layers=cfg["num_hidden_layers"],
-            num_attention_heads=cfg["num_attention_heads"],
-            intermediate_size=cfg["intermediate_size"],
-            max_position_embeddings=cfg["max_position_embeddings"],
-            attn_implementation="eager",
-        )
-        model = GPTNeoXForCausalLM(model_config).to(args.device)
+        arch = cfg.get("arch", "neox")
+
+        if arch == "llama":
+            from transformers import LlamaConfig, LlamaForCausalLM
+            model_config = LlamaConfig(
+                vocab_size=vocab_size,
+                hidden_size=cfg["hidden_size"],
+                num_hidden_layers=cfg["num_hidden_layers"],
+                num_attention_heads=cfg["num_attention_heads"],
+                num_key_value_heads=cfg.get("num_key_value_heads", cfg["num_attention_heads"]),
+                intermediate_size=cfg["intermediate_size"],
+                max_position_embeddings=cfg["max_position_embeddings"],
+                rope_theta=cfg.get("rope_theta", 10000.0),
+                attn_implementation="eager",
+            )
+            model = LlamaForCausalLM(model_config).to(args.device)
+        else:
+            from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+            model_config = GPTNeoXConfig(
+                vocab_size=vocab_size,
+                hidden_size=cfg["hidden_size"],
+                num_hidden_layers=cfg["num_hidden_layers"],
+                num_attention_heads=cfg["num_attention_heads"],
+                intermediate_size=cfg["intermediate_size"],
+                max_position_embeddings=cfg["max_position_embeddings"],
+                attn_implementation="eager",
+            )
+            model = GPTNeoXForCausalLM(model_config).to(args.device)
+
         model.eval()
-        print("Model on %s" % args.device, flush=True)
+        print("Model (%s, %s) on %s" % (args.size, arch, args.device), flush=True)
 
         tmp_cp = Path("/tmp/atlas-probe-checkpoint.pt")
 
@@ -731,7 +787,9 @@ def main():
             gpu_cleanup()
 
             results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
-            classifications = classify_heads(results)
+            classifications = classify_heads(results,
+            num_layers=MODEL_CONFIGS[args.size]["num_hidden_layers"],
+            num_heads=MODEL_CONFIGS[args.size]["num_attention_heads"])
 
             output = {
                 "checkpoint": cp_key,
@@ -881,20 +939,38 @@ def main():
 
         # Create model once
         from tokenizers import Tokenizer as Tok
-        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
         tokenizer = Tok.from_file(args.tokenizer)
         vocab_size = tokenizer.get_vocab_size()
         cfg = MODEL_CONFIGS[args.size]
-        model_config = GPTNeoXConfig(
-            vocab_size=vocab_size,
-            hidden_size=cfg["hidden_size"],
-            num_hidden_layers=cfg["num_hidden_layers"],
-            num_attention_heads=cfg["num_attention_heads"],
-            intermediate_size=cfg["intermediate_size"],
-            max_position_embeddings=cfg["max_position_embeddings"],
-            attn_implementation="eager",
-        )
-        model = GPTNeoXForCausalLM(model_config).to(args.device)
+        arch = cfg.get("arch", "neox")
+
+        if arch == "llama":
+            from transformers import LlamaConfig, LlamaForCausalLM
+            model_config = LlamaConfig(
+                vocab_size=vocab_size,
+                hidden_size=cfg["hidden_size"],
+                num_hidden_layers=cfg["num_hidden_layers"],
+                num_attention_heads=cfg["num_attention_heads"],
+                num_key_value_heads=cfg.get("num_key_value_heads", cfg["num_attention_heads"]),
+                intermediate_size=cfg["intermediate_size"],
+                max_position_embeddings=cfg["max_position_embeddings"],
+                rope_theta=cfg.get("rope_theta", 10000.0),
+                attn_implementation="eager",
+            )
+            model = LlamaForCausalLM(model_config).to(args.device)
+        else:
+            from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+            model_config = GPTNeoXConfig(
+                vocab_size=vocab_size,
+                hidden_size=cfg["hidden_size"],
+                num_hidden_layers=cfg["num_hidden_layers"],
+                num_attention_heads=cfg["num_attention_heads"],
+                intermediate_size=cfg["intermediate_size"],
+                max_position_embeddings=cfg["max_position_embeddings"],
+                attn_implementation="eager",
+            )
+            model = GPTNeoXForCausalLM(model_config).to(args.device)
+
         model.eval()
 
         completed = 0
@@ -924,7 +1000,9 @@ def main():
                 gpu_cleanup()
 
                 results = probe_checkpoint(model, tokenizer, probe_dir, args.device)
-                classifications = classify_heads(results)
+                classifications = classify_heads(results,
+            num_layers=MODEL_CONFIGS[args.size]["num_hidden_layers"],
+            num_heads=MODEL_CONFIGS[args.size]["num_attention_heads"])
 
                 output = {
                     "checkpoint": str(cp_path),
