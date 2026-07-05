@@ -357,6 +357,61 @@ COMPLETE (2026-07-05). Probed 4 existing Llama checkpoints from the coupling pap
 
 **Cost:** ~$0.50 (inference only, existing checkpoints).
 
+### Remaining: Downstream Task Benchmark
+
+Tests whether the capacity tax translates into measurable task performance differences (accuracy, not just PPL). Uses existing NeoX 410M baseline vs comparison checkpoints on FineWeb. Inference only, no training.
+
+#### Design principles
+
+- Same architecture, same training data, only tokenizer differs (baseline vs comparison)
+- Tasks simple enough for 410M (not MMLU or HumanEval, too hard at this scale)
+- Mix of structural tasks (where boundary recovery matters) and prose tasks (where it shouldn't)
+- Accuracy on each task, not PPL. Binary correct/incorrect. 100 examples per task.
+- The comparison model should win on structural tasks and tie on prose
+
+#### Proposed tasks
+
+| Task | What it tests | Expected effect | How to measure |
+|------|--------------|-----------------|----------------|
+| Bracket matching | Given nested `([{}])`, is it balanced? | Large: baseline 4 bracket heads, comparison 39 | Generate 100 balanced/unbalanced bracket sequences, prompt model to predict "balanced" or "unbalanced", measure accuracy |
+| Duplicate detection | Which word appears twice in this list? | Large: ablation showed +405% degradation when spacing removed | Generate 100 word lists with one duplicate, prompt model to identify it, measure accuracy |
+| Field extraction | What is the value of field X in this JSON/GCF payload? | Large: delimiter heads + structural processing | Generate 100 small payloads (5-10 fields), ask for a specific field value, measure exact match accuracy |
+| Code completion | Complete this Python function | Medium: code depends on bracket/delimiter boundaries | 100 simple function completions (reverse a list, sum elements), measure whether output is syntactically valid |
+| Sentence boundary | Where does the second sentence start? | Medium: spacing-dependent | 100 two-sentence passages, ask which word starts the second sentence, measure accuracy |
+| Prose QA | Answer a question about a paragraph | Small: NL is redundant, spacing shouldn't matter | 100 simple factual questions about short paragraphs, measure accuracy |
+
+#### Implementation
+
+Write `eval/benchmark_downstream.py` that:
+1. Loads a checkpoint and tokenizer
+2. For each task, generates 100 test examples programmatically (no external dataset dependency)
+3. Runs each example through the model using greedy next-token prediction
+4. Scores accuracy per task
+5. Reports per-task accuracy for baseline vs comparison
+6. Outputs JSON with all results
+
+#### Checkpoints to test
+
+| Model | Checkpoint | Source |
+|-------|-----------|--------|
+| NeoX 410M baseline (standard BPE) | HF: blackwell-systems/attention-head-atlas/baseline-step-20000.pt | FineWeb trained |
+| NeoX 410M comparison (merge barriers) | HF: blackwell-systems/attention-head-atlas/comparison-step-20000.pt | FineWeb trained |
+
+#### Expected results
+
+The comparison model should show:
+- Higher accuracy on bracket matching (39 bracket heads vs 4)
+- Higher accuracy on duplicate detection (spacing heads freed for other work)
+- Higher accuracy on field extraction (more delimiter heads)
+- Similar or higher accuracy on code completion
+- Similar accuracy on prose QA (no NL cost from merge barriers)
+
+If the comparison model wins on structural tasks with no regression on prose, the capacity tax claim has downstream task validation.
+
+#### Cost
+
+Inference only. Can run on any GPU instance or locally on CPU (slower). No training needed. The checkpoints are on HuggingFace.
+
 ### Remaining: Llama Ablation
 
 Run zero-ablation on Llama 410M and 1.3B to confirm spacing heads are mandatory damage repair on GQA, not just MHA. The checkpoints are already probed. Requires adapting `ablate_spacing_heads.py` for Llama architecture (GQA complication: zeroing a query head leaves 3 siblings sharing the same KV projection). May need KV-group ablation as in the coupling paper.
