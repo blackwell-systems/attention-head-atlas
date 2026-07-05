@@ -22,7 +22,7 @@ from pathlib import Path
 from collections import deque
 
 RESULTS_DIR = Path(__file__).parent.parent / 'results'
-BEHAVIORS = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+BEHAVIORS = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate', 'spacing']
 
 
 def load_trajectories(run_dir):

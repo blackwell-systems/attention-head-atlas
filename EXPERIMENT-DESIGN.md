@@ -6,20 +6,22 @@ Attention heads develop specialized behaviors in a predictable developmental seq
 
 ## Experimental Design
 
-Two training runs that differ ONLY in the tokenizer:
+Four training runs isolating the tokenizer variable, seed variable, and barrier character set variable:
 
-| | Baseline (standard BPE) | Comparison (merge barriers) |
-|---|---|---|
-| Architecture | GPT-NeoX 410M (24 layers, 16 heads, 384 total) | Same |
-| Tokenizer | standard-64k (no barriers) | structok-64k (16 merge barriers) |
-| Vocab size | ~65,536 | 65,539 |
-| Training data | FineWeb 5GB sample | Same source corpus |
-| tokens.bin | Different (different tokenizer) | Different (different tokenizer) |
-| Batch size | 8 | 8 |
-| Learning rate | 3e-4 flat | 3e-4 flat |
-| Steps | 20,000 | 20,000 |
-| Context length | 2,048 | 2,048 |
-| Precision | bf16 | bf16 |
+| | Baseline | Comparison | Seed2 | NL-barrier |
+|---|---|---|---|---|
+| Architecture | GPT-NeoX 410M (24 layers, 16 heads, 384 total) | Same | Same | Same |
+| Tokenizer | standard-64k (no barriers) | structok-64k (16 struct barriers) | standard-64k (no barriers) | nl-barrier-64k (10 NL barriers) |
+| Vocab size | 65,536 | 65,539 | 65,536 | ~65,536 |
+| Training data | FineWeb 5GB | Same | Same | Same |
+| Random init | Default | Default | Different seed | Default |
+| Batch size | 1 (single sequence per step) | 1 | 1 | 1 |
+| Learning rate | 3e-4 flat | 3e-4 flat | 3e-4 flat | 3e-4 flat |
+| Steps | 20,000 | 20,000 | 20,000 | 20,000 |
+| Context length | 2,048 | 2,048 | 2,048 | 2,048 |
+| Precision | bf16 | bf16 | bf16 | bf16 |
+
+The structured-data barrier tokenizer forbids merges involving 16 characters: `| @ < > " ' : , ; \t { } [ ] ( )`. The NL-barrier tokenizer forbids merges involving 10 characters: `. ' ? ! - " ( ) ; :`. Five characters overlap.
 
 ## Corpus
 
@@ -34,7 +36,7 @@ FineWeb (HuggingFaceFW/fineweb, sample-10BT split), ~5GB sample. High-quality we
 
 ## Probing
 
-At each checkpoint, every head (384) is probed across 8 behavior types on 6 fixed probe texts:
+At each checkpoint, every head (384) is probed on 6 fixed probe texts across 6 behavior types plus 2 auxiliary metrics:
 
 | Behavior | Metric | Probe text |
 |----------|--------|-----------|
@@ -59,24 +61,34 @@ atlas/
   tokens/
     standard-64k.json                    # tokenizer definition
     structok-64k.json                    # tokenizer definition
+    nl-barrier-64k.json                  # NL-barrier tokenizer definition
     atlas-standard-64k.bin               # pretokenized corpus (standard)
-    atlas-structok-64k.bin               # pretokenized corpus (barriers)
+    atlas-structok-64k.bin               # pretokenized corpus (struct barriers)
+    atlas-nl-barrier-64k.bin             # pretokenized corpus (NL barriers)
   runs/
     baseline/checkpoints/step-00000.pt through step-20000.pt   # 131 checkpoints COMPLETE
     comparison/checkpoints/step-00000.pt through step-20000.pt # 131 checkpoints COMPLETE
-    seed2/checkpoints/                                          # 131 checkpoints PLANNED
+    seed2/checkpoints/step-00000.pt through step-20000.pt      # 131 checkpoints COMPLETE
+    nl-barrier/checkpoints/step-00000.pt through step-20000.pt # 131 checkpoints COMPLETE
   results/
-    baseline/step-00000.json through step-20000.json           # 131 probe results COMPLETE
-    comparison/step-00000.json through step-20000.json         # 131 probe results COMPLETE
-    seed2/                                                      # PLANNED
+    baseline/step-00000.json through step-20000.json           # v1: 131 probe results (6 behaviors)
+    comparison/step-00000.json through step-20000.json         # v1: 131 probe results
+    seed2/step-00000.json through step-20000.json              # v1: 131 probe results
+    nl-barrier/step-00000.json through step-20000.json         # v1: 131 probe results
+    baseline-v2/step-00000.json through step-20000.json        # v2: 131 probe results (7 behaviors incl. spacing)
+    comparison-v2/step-00000.json through step-20000.json      # v2: 131 probe results
+    seed2-v2/step-00000.json through step-20000.json           # v2: 131 probe results
+    nl-barrier-v2/step-00000.json through step-20000.json      # v2: 131 probe results
 ```
 
 ## Provenance
 
 - Corpus: FineWeb (HuggingFace HuggingFaceFW/fineweb, sample-10BT, 5GB sample)
-- Tokenizers: standard-64k.json from merge-barriers run-002, structok-64k.json from structok repo
+- Tokenizers: standard-64k.json from merge-barriers run-002, structok-64k.json from structok repo, nl-barrier-64k.json trained by `eval/train_nl_tokenizer.py`
 - Training script: `eval/train_atlas.py`
 - Probing script: `eval/probe_heads.py`
+- Excess correction: `eval/excess_score_correction.py`
+- Analysis scripts: `eval/analyze_p0_deep.py`, `eval/analyze_seed2.py`, `eval/analyze_velocity_circuits.py`, `eval/analyze_nl_barrier.py`, `eval/measure_nl_frustration_gap.py`
 - All probe texts committed to repo and archived to R2
 
 ## Key Questions
@@ -88,89 +100,230 @@ atlas/
 5. Does the merge-barrier tokenizer change the developmental sequence, not just the outcome?
 6. Is the developmental order deterministic or stochastic across random seeds?
 
-## Run 3: Seed Variation
-
-Tests whether the developmental sequence observed in baseline is deterministic (same order every time) or stochastic (seed-dependent, per Baherwani et al. 2026).
-
-| | Seed variation (seed2) |
-|---|---|
-| Architecture | GPT-NeoX 410M (same as baseline) |
-| Tokenizer | standard-64k (same as baseline) |
-| Training data | FineWeb 5GB sample (same pretokenized bin as baseline) |
-| Random init | Different (new instance, new PyTorch default init) |
-| Steps | 20,000 |
-| R2 prefix | `atlas/runs/seed2` |
-| Results prefix | `atlas/results/seed2` |
-
-Everything identical to baseline except the random number generator seed. If the developmental timeline matches baseline, the sequence is architecture-determined. If it differs, emergence is stochastic and single-run observations cannot be generalized.
-
 ## Estimated Cost
 
 - Baseline + Comparison: ~$5 (completed)
-- Seed variation: ~$2.50
-- Total: ~$7.50
+- Seed variation: ~$2.50 (completed)
+- NL-barrier: ~$2.50 (completed)
+- v2 re-probe (all 4 runs): ~$0.80 (completed, 2x RTX 4090)
+- Structok corpus (2 runs): ~$7.00 (completed, training + probing across 4 instances)
+- Total spent: ~$17.80
 
 ## Status (2026-07-04)
 
-| Run | Training | Probing | Analysis |
-|-----|----------|---------|----------|
-| Baseline (standard BPE) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
-| Comparison (merge barriers) | COMPLETE (131 checkpoints on R2) | COMPLETE (131 results on R2) | 8 findings documented |
-| Seed variation (seed2) | IN PROGRESS | PLANNED (local, after training) | - |
+| Run | Training | v1 Probing | v2 Probing | Excess (v1) | Excess (v2) | Analysis |
+|-----|----------|-----------|-----------|-------------|-------------|----------|
+| Baseline | COMPLETE | COMPLETE (old probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
+| Comparison | COMPLETE | COMPLETE (old probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
+| Seed2 | COMPLETE | COMPLETE (new probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
+| NL-barrier | COMPLETE | COMPLETE (new probes) | COMPLETE (spacing) | COMPLETE (step-50 proxy*) | COMPLETE | 13 findings |
 
-All probe results also committed to `results/` in this repo. 6 visualization charts in `charts/`. Analysis scripts run locally (no GPU needed).
+*NL-barrier step-0 checkpoint corrupted by disk-full event. Step-50 base rates used as proxy for excess correction in both v1 and v2. Defensible: 50 steps = 0.008% of corpus, attention still approximately random.
+
+All 524 checkpoints on R2. 1048 probe results (524 v1 + 524 v2) on R2 and committed to `results/`. Excess-corrected results in `results/{run}-excess/` (v1) and `results/{run}-v2-excess/` (v2). 9 visualization charts in `charts/` (from v1 data; v2 charts pending). 13 findings documented in RESULTS.md. Paper draft in `paper/developmental-atlas.md` (needs revision for v2 findings).
 
 ## Roadmap
 
-### Next: Structok Corpus Atlas (Run 4)
+### Completed: Structok Corpus Atlas (Runs 5-6)
 
-Run the atlas on the structok corpus (14% JSON, 8% GCF, 13% code) instead of FineWeb. Same methodology, same checkpoint schedule, different corpus. The frustration gap should appear on this corpus, and we'd see exactly WHEN it emerges at 50-step granularity. This directly extends the stranded paper from 8 data points to 130.
+Tests the two-regime prediction: a corpus with high delimiter density should produce BOTH a frustration gap AND spacing heads, bridging the web text regime (zero gap, 183 spacing heads) and the structured data regime (40pp gap, full stranding).
 
-The FineWeb atlas and the structok-corpus atlas together tell the full story: "the developmental sequence is similar but the frustration gap only appears when structured data is present in training."
+#### Corpus
 
-Estimated cost: ~$2.50. Requires the structok corpus pretokenized bins (already on R2 from merge-barriers experiments).
+The rebalanced structok corpus from merge-barriers run-002 (6.1 GB):
 
-### Natural Language Barriers (Run 5)
+| Source | Size | % |
+|--------|------|---|
+| FineWeb (web text) | 2.0 GB | 33% |
+| JSON | 850 MB | 14% |
+| Code (Go, Python, TS, JS, Rust) | 800 MB | 13% |
+| GCF | 500 MB | 8% |
+| Wikipedia | 200 MB | 3% |
+| YAML/CSV | 45 MB | 1% |
 
-Natural language has its own structural delimiters that BPE merges: contractions (`'t`, `'s` merge the apostrophe), quotation boundaries (`"Hello` merges like JSON's `"name`), sentence boundaries (`. ` merges across sentences), parentheticals (`(the` merges the paren), and hyphens (`self-` merges the separator).
+#### Pretokenized bins (already on R2)
 
-The existing experiments used 16 barrier characters optimized for structured data (pipe, @, <, >, {, }, etc.). A natural-language-optimized barrier set would test whether merge barriers are a general principle, not just a structured data optimization:
+Both bins are on R2, pretokenized with the SAME tokenizers used in the FineWeb atlas runs:
 
-**NL barrier characters**: `' . ? ! - " ( ) ; :`
+| R2 key | Tokenizer | Size |
+|--------|-----------|------|
+| `tokens/standard-64k-v2.bin` | `standard-64k.json` (same as atlas baseline) | 4.8 GB |
+| `tokens/structok-64k-v2.bin` | `structok-64k.json` (same as atlas comparison) | 4.8 GB |
 
-Drops pipe, @, <, >, {, }, [, ] (irrelevant to prose). Adds period, question mark, exclamation, hyphen (critical to prose structure).
+Tokenizer identity verified: run-002 used the same `standard-64k.json` and `structok-64k.json` files that are in `atlas/tokens/` on R2. No re-tokenization needed.
 
-Three-way comparison using existing data:
-1. Baseline (no barriers) - already done
-2. Structured barriers (16 chars) - already done
-3. NL barriers (10 chars) - new run
+**Provenance**: bins were created by `structok/prep_run002.py` (private repo, Blackwell Systems). The script downloads HF datasets (FineWeb, Wikipedia), downloads code/JSON/YAML from R2 (originally from run-001), generates GCF data in-script with seed-based randomization, concatenates all sources, shuffles, pretokenizes with both tokenizers, and uploads to R2. These are the same bins that trained the models published in the merge-barriers paper (DOI: 10.5281/zenodo.20925910, run-002).
 
-**What to measure:**
-- Does the frustration gap appear on prose-heavy probes?
-- Do new head types emerge (sentence-boundary heads, clause-boundary heads)?
-- Does natural language perplexity improve (the structured barriers showed 0.7x NL disadvantage; NL barriers might eliminate this)
+No NL-barrier bin exists for the structok corpus. Would need `train_nl_tokenizer.py` + `prep_data.py` to create one. Not planned for this run (two runs is sufficient to test the prediction).
 
-**What this proves:** If NL barriers improve prose processing, merge barriers are a universal principle applicable to any domain with structural delimiters, not just JSON/code/SMILES. This would significantly expand the impact of the research program.
+#### Runs
 
-Estimated cost: ~$1.25. Requires a new tokenizer (local operation) and one training run on the existing FineWeb bin.
+| Run | Name | Tokenizer | Corpus bin (R2) | R2 checkpoint prefix | R2 results prefix |
+|-----|------|-----------|----------------|---------------------|------------------|
+| 5 | structok-baseline | standard-64k.json | `tokens/standard-64k-v2.bin` | `atlas/runs/structok-baseline` | `atlas/results/structok-baseline` |
+| 6 | structok-comparison | structok-64k.json | `tokens/structok-64k-v2.bin` | `atlas/runs/structok-comparison` | `atlas/results/structok-comparison` |
 
-### Fix: Add Spacing Behavior to Probe Taxonomy
+#### Hyperparameters (identical to FineWeb runs)
 
-Wang et al. (2025, "Embryology of a Language Model") discovered a "spacing fin": a distinct head specialization for predicting space and newline tokens. Our 8-behavior taxonomy does not include spacing. Some heads currently classified as "unclassified" may be spacing specialists.
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Architecture | GPT-NeoX 410M (24 layers, 16 heads) | Same as all atlas runs |
+| Steps | 20,000 | Same schedule |
+| Batch size | 1 (single sequence per step) | Matches FineWeb runs |
+| Learning rate | 3e-4 flat | Matches FineWeb runs |
+| Context length | 2,048 | Matches FineWeb runs |
+| Precision | bf16 | Matches FineWeb runs |
+| Checkpoint schedule | 131 checkpoints (every 50 to step 2000, every 200 to step 20000) | Same schedule |
 
-**Implementation:** Add `measure_spacing()` to `probe_heads.py` that measures attention mass on positions containing space, newline, tab, and carriage return tokens. Same methodology as `measure_delimiter()` but filtering for whitespace characters.
+Note: the structok corpus bin is 4.8 GB vs 2.3 GB for FineWeb. With the same number of steps, the model sees proportionally less of the larger corpus. This is acceptable because we're comparing within the structok runs (baseline vs comparison) and against FineWeb runs at the same step count.
 
-**Validation:** Re-probe step-20000 for all runs (~2 minutes per run on GPU). If spacing is a genuine category (heads with high excess spacing scores), add it to the full taxonomy for future runs.
+#### Probing
 
-**Cost:** Requires GPU for re-probing. Can run on the NL-barrier instance after it finishes. No new training needed.
+Use the v2 probe script (`eval/probe_heads.py`) with 7 behavior types including spacing. Same probe texts as the v2 FineWeb re-probe (consistent across all runs). R2 streaming mode with `--force` for probing (since these are new runs, there are no existing results to protect).
 
-### Completed: Excess Score Correction (post-hoc)
+Use `--save-local` to also save results to `results/structok-baseline/` and `results/structok-comparison/` for git commit.
 
-Applied. The excess score methodology subtracts step-0 base rates to reveal genuine specialization. Corrected results in `results/baseline-excess/` and `results/comparison-excess/`. See RESULTS.md Finding 1 for impact.
+#### Excess correction
+
+Run `eval/excess_score_correction.py --run structok-baseline --run structok-comparison`. Step-0 base rates from the structok corpus will differ from FineWeb (higher delimiter base rates due to 14% JSON + 8% GCF), which is exactly what excess correction is designed to handle.
+
+#### Predictions (testable)
+
+| Metric | FineWeb (observed) | Structok (predicted) | Rationale |
+|--------|-------------------|---------------------|-----------|
+| Frustration gap (baseline) | 0 pp | > 5 pp | 35% structured content provides delimiter density |
+| Frustration gap (comparison) | 0 pp | ~0 pp | Merge barriers prevent stranding |
+| Spacing heads (baseline) | 183 | 50-150 | Some spacing, but delimiter competes for heads |
+| Spacing heads (comparison) | 13 | 0-10 | Barriers already eliminate spacing on FineWeb |
+| P0 heads (baseline) | 32 | 20-60 | May increase with more failed delimiter attempts |
+| P0 heads (comparison) | 40 | 20-40 | Similar or lower |
+| Bracket specialists (comparison) | 39 | 40-80 | More bracket content available |
+
+The key prediction: spacing heads AND frustration gap will coexist in the baseline structok run, confirming the two-regime model is a continuum, not a binary.
+
+#### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|-----------|
+| Instance dies mid-training | Lost time, partial data | Select instance with max_days > 7. Background R2 upload saves completed checkpoints. Resume with `--resume-from r2`. |
+| Disk fills (131 checkpoints x 1.7 GB = 223 GB) | Training stops | Require 300+ GB disk. Monitor disk usage. Delete local checkpoints after R2 upload verified. |
+| Wrong tokenizer version | Invalid comparison | VERIFIED: `standard-64k.json` and `structok-64k.json` on R2 are identical between atlas/tokens/ and the bins in tokens/. |
+| R2 upload failures | Missing checkpoints | probe_heads.py has verified uploads with retry. train_atlas.py has background upload thread with retry. |
+| Budget overrun | Can't finish | Training: ~$2.50/run x 2 = $5. Probing: ~$0.40/run x 2 = $0.80. Total: ~$5.80. Budget ceiling: $8. |
+| Corpus bin download slow | Wasted instance time | Pick instance with > 1 Gbps network. 4.8 GB download at 1 Gbps = ~40s. |
+
+#### Validation checkpoints (stop/go gates)
+
+1. **After bin download**: verify file size matches R2 (4.8 GB for standard, 4.8 GB for structok).
+2. **After step-0**: probe and verify base rates look reasonable. Delimiter base rate should be higher than FineWeb (more delimiter content).
+3. **After step-1000**: check frustration gap. If nonzero, the prediction is already partially confirmed. If zero, the corpus may not be structured enough (but continue anyway).
+4. **After step-5000**: check head distribution. Spacing heads should be emerging but fewer than 183 (FineWeb level).
+
+#### Execution order
+
+1. Spin up instance (RTX 4090, 300+ GB disk, fast network, max_days > 7)
+2. Install deps: `pip install tokenizers transformers boto3`
+3. Upload `train_atlas.py`, `probe_heads.py`, `excess_score_correction.py`, all probe texts
+4. Download tokenizers from `atlas/tokens/` on R2
+5. Download corpus bin from `tokens/standard-64k-v2.bin` on R2
+6. Run training: `python3 train_atlas.py --tokenizer standard-64k.json --data standard-64k-v2.bin --run-name structok-baseline --r2-prefix atlas/runs/structok-baseline --output-dir /root/runs/structok-baseline --steps 20000`
+7. Probe immediately after training: `python3 probe_heads.py --r2-prefix atlas/runs/structok-baseline --tokenizer standard-64k.json --probe-dir probes/ --save-local results/structok-baseline/`
+8. Repeat steps 5-7 with structok-64k tokenizer and bin for comparison run
+9. Download results locally
+10. Run excess correction locally
+11. Analyze: compare to FineWeb predictions table above
+
+#### Results (2026-07-04)
+
+COMPLETE. Both runs trained, probed, excess-corrected. Key finding: spacing persists at 172/384 even on structured data (nearly identical to FineWeb's 183). Frustration gap is 1.0 pp (nonzero, confirming two-regime model as continuum). Delimiter heads scale up (131 vs 74) while positional_prev shrinks (17 vs 68). Spacing is a baseline cost of standard BPE regardless of corpus composition. See RESULTS.md Finding 14.
+
+### Completed: Spacing Head Ablation Study
+
+Tests whether spacing heads are counterproductive (removal improves PPL), neutral, or productive. Follows the zero-ablation methodology from the coupling paper (Blackwell, 2026a, Section 5.3).
+
+#### Design
+
+Zero-ablation on GPT-NeoX 410M (full MHA, clean per-head intervention). For each ablation condition, deep copy the model, zero the output projection weights (`gpt_neox.layers.{layer}.attention.dense.weight[:, start:end] = 0`) for the selected heads, measure perplexity on the 7 probe texts, discard the copy.
+
+#### Ablation conditions
+
+| Condition | Heads | Purpose |
+|-----------|-------|---------|
+| Baseline | None (0) | Reference PPL |
+| Spacing ablation | 183 spacing heads (baseline) | Are spacing heads counterproductive? |
+| P0 ablation | 32 P0 heads (baseline) | Are P0 heads counterproductive? |
+| Random control x5 | 183 random non-spacing heads | Capacity reduction baseline |
+
+The causal signal is the gap between spacing ablation and random controls, not the absolute PPL change. This controls for the generic capacity reduction from zeroing 183/384 heads.
+
+#### Models to test
+
+| Model | Checkpoint | Spacing heads | Source |
+|-------|-----------|--------------|--------|
+| FineWeb baseline | `atlas/runs/baseline/checkpoints/step-20000.pt` | 183 | `results/baseline-v2-excess/step-20000.json` |
+| Structok baseline | `atlas/runs/structok-baseline/checkpoints/step-20000.pt` | 172 | `results/structok-baseline-excess/step-20000.json` |
+| FineWeb comparison | `atlas/runs/comparison/checkpoints/step-20000.pt` | 13 | `results/comparison-v2-excess/step-20000.json` |
+
+The comparison model (13 spacing heads) serves as a sanity check: removing 13 heads from a model with productive specialization should degrade performance.
+
+#### Predictions
+
+| Condition | Predicted PPL change | Rationale |
+|-----------|---------------------|-----------|
+| Spacing ablation (baseline) | Improves or neutral | Spacing heads attend to whitespace boundaries the model doesn't need; same pattern as stranded heads at 1.3B |
+| Spacing ablation (structok) | Improves or neutral | Same mechanism, different corpus |
+| P0 ablation (baseline) | Improves or neutral | P0 heads are a failure mode (Section 4.2) |
+| Random control (baseline) | Degrades | Removing productive heads should hurt |
+| Comparison spacing ablation | Degrades or neutral | Only 13 heads, model has productive specialization |
+
+The strongest possible result: spacing removal improves PPL AND random control degrades PPL. This would prove spacing heads are not just wasteful but counterproductive, matching the scaling paradox from the coupling paper (removing stranded heads improved comprehension by 57% at 1.3B).
+
+#### Execution
+
+1. Spin up GPU instance (RTX 4090, minimal disk, fast network)
+2. Upload `eval/ablate_spacing_heads.py`, probe texts, tokenizers
+3. Download step-20000 checkpoint from R2 (or HF)
+4. Run ablation: `python ablate_spacing_heads.py --r2-checkpoint atlas/runs/baseline/checkpoints/step-20000.pt --tokenizer standard-64k.json --classifications results/baseline-v2-excess/step-20000.json --probe-dir probes/ --output results/ablation/baseline-spacing.json`
+5. Repeat for structok-baseline and comparison
+6. Download results, record in RESULTS.md
+
+**Cost:** Inference only, ~30 min on RTX 4090. ~$0.30.
+
+**Script:** `eval/ablate_spacing_heads.py`. Provenance: adapted from the 18-phase ablation protocol in the coupling paper (Blackwell, 2026a). Zero-ablation on output projections, paired random controls, per-text and mean PPL reporting.
+
+#### Results (2026-07-04)
+
+COMPLETE. Spacing heads are productive (+64.3% degradation vs +28.7% random controls). They are mandatory damage repair, not waste. P0 heads are genuinely useless (+1.4%). The model dedicates 47% of heads to boundary recovery that merge barriers make unnecessary. See RESULTS.md Finding 15.
+
+### Completed: Spacing Probe + Full Re-probe (v2)
+
+COMPLETE (2026-07-04). Added `measure_spacing()` to `probe_heads.py`. Re-probed all 524 checkpoints (4 runs x 131) on RTX 4090 with 7-behavior taxonomy and consistent probe texts across all runs.
+
+**Result:** Spacing is the dominant specialization in standard BPE: 183/384 heads (47.7%) in both baseline and seed2. Merge barriers reduce to 13 (struct) or 0 (NL). 54 of v1's 96 baseline P0 heads were actually spacing specialists. See RESULTS.md Findings 12 and 13.
+
+**Data:** v2 raw results in `results/{run}-v2/`, excess-corrected in `results/{run}-v2-excess/`. v1 data preserved in `results/{run}/` and `results/{run}-excess/`. Both on R2 under `atlas/results/`.
+
+**Cost:** ~$0.80 total (2 RTX 4090 instances, ~1.5 hours).
+
+### Completed: Punctuated Prose Probe for NL Frustration Gap
+
+COMPLETE (2026-07-04). Wrote `probes/prose_punctuated.txt` with natural punctuation. Measured NL frustration gap on step-20000 for all 4 runs. Result: NL gap is genuinely zero on web text (all values under 1pp). The frustration gap requires structured data density, not just delimiter characters. On web text, BPE damage manifests as spacing head proliferation instead. See RESULTS.md Finding 13.
+
+### Completed: NL-Barrier Run (Run 4)
+
+COMPLETE. NL-barrier tokenizer trained with barriers on `. ' ? ! - " ( ) ; :`. Result: merge barriers are universal (NL barriers r=0.923 with struct barriers). See RESULTS.md Finding 11.
+
+### Completed: Seed Variation (Run 3)
+
+COMPLETE. Distribution correlation r=0.794. Emergence is partially stochastic. See RESULTS.md Finding 10.
+
+### Completed: Excess Score Correction
+
+COMPLETE. Corrected results in `results/{run}-excess/` for all 4 runs. See RESULTS.md Finding 1.
 
 ### Completed: Probe Text Improvements
 
-Improved probes written (real bracketed code, standardized lengths, punctuation-stripped prose). Pending validation on step-20000 checkpoint before full re-probe.
+COMPLETE. Improved probes (real bracketed code, standardized lengths, punctuation-stripped prose) used for seed2 and NL-barrier runs. Baseline and comparison used original probes; excess correction normalizes across probe sets.
 
 ## Relationship to Prior Work
 

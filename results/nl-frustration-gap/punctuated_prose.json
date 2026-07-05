@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "struct_gap_pp": -0.55,
+    "nl_gap_pp": -0.42
+  },
+  "comparison": {
+    "struct_gap_pp": 0.0,
+    "nl_gap_pp": -0.3
+  },
+  "seed2": {
+    "struct_gap_pp": -0.64,
+    "nl_gap_pp": -0.65
+  },
+  "nl-barrier": {
+    "struct_gap_pp": 0.0,
+    "nl_gap_pp": 0.0
+  }
+}

@@ -40,12 +40,9 @@ def get_r2_client():
     """Create boto3 S3 client for R2."""
     import boto3
     return boto3.client("s3",
-        endpoint_url=os.environ.get("R2_ENDPOINT",
-            "https://b5e39abd50c5b82163c5fe72db9b880e.r2.cloudflarestorage.com"),
-        aws_access_key_id=os.environ.get("R2_ACCESS_KEY",
-            "d77b3d0a3829377b3b71ffc11f610435"),
-        aws_secret_access_key=os.environ.get("R2_SECRET_KEY",
-            "9206e3609275a5b8655d5c5b0f3faf536415e324f4493cfe3ce2b4ffb53e0244"))
+        endpoint_url=os.environ["R2_ENDPOINT"],
+        aws_access_key_id=os.environ["R2_ACCESS_KEY"],
+        aws_secret_access_key=os.environ["R2_SECRET_KEY"])
 
 
 R2_BUCKET = "structok-training"
@@ -119,7 +116,6 @@ def main():
     parser.add_argument("--r2-prefix", default=None, help="R2 prefix for uploads")
     parser.add_argument("--output-dir", required=True, help="Local output directory for checkpoints")
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--seq-length", type=int, default=2048)
     parser.add_argument("--skip-upload", action="store_true", help="Skip R2 upload after training")
     parser.add_argument("--resume-from", type=str, help="Path to checkpoint to resume from (or 'r2' to download latest from R2)")

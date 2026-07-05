@@ -1,0 +1,14 @@
+# Reference PDFs (local only, not for public distribution)
+references/*.pdf
+
+# Internal planning docs
+OUTREACH.md
+SUMMARY.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store

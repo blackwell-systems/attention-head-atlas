@@ -3,7 +3,7 @@
 Generate atlas visualization charts from probe results.
 
 Produces publication-quality charts from the developmental atlas data.
-Supports raw and excess-corrected results, three runs (baseline, comparison, seed2).
+Supports raw and excess-corrected results, four runs (baseline, comparison, seed2, nl-barrier).
 
 Usage:
     python generate_atlas.py                    # light theme, excess scores
@@ -24,7 +24,7 @@ from collections import deque
 RESULTS_DIR = Path(__file__).parent.parent / 'results'
 CHARTS_DIR = Path(__file__).parent
 
-BEHAVIORS = ['delimiter', 'duplicate', 'bracket', 'positional_prev', 'positional_p0', 'induction', 'unclassified']
+BEHAVIORS = ['delimiter', 'duplicate', 'bracket', 'positional_prev', 'positional_p0', 'induction', 'spacing', 'unclassified']
 COLORS = {
     'delimiter': '#18befc',
     'duplicate': '#ff9944',
@@ -32,6 +32,7 @@ COLORS = {
     'positional_prev': '#a78bfa',
     'positional_p0': '#ff4444',
     'induction': '#f59e0b',
+    'spacing': '#ec4899',
     'unclassified': '#888888',
 }
 
@@ -40,13 +41,19 @@ RUN_COLORS = {
     'comparison': '#18befc',
     'seed2': '#22c55e',
     'nl-barrier': '#a78bfa',
+    'structok-baseline': '#f97316',
+    'structok-comparison': '#06b6d4',
 }
 RUN_LABELS = {
     'baseline': 'Baseline (standard BPE)',
     'comparison': 'Comparison (struct barriers)',
     'seed2': 'Seed2 (standard BPE, diff init)',
     'nl-barrier': 'NL barriers (. \' ? ! - etc)',
+    'structok-baseline': 'Structok corpus (standard BPE)',
+    'structok-comparison': 'Structok corpus (struct barriers)',
 }
+# Structok runs were probed with v2 probes from the start (no -v2 suffix)
+STRUCTOK_RUNS = {'structok-baseline', 'structok-comparison'}
 
 # Theme globals
 BG = 'white'
@@ -95,8 +102,16 @@ def save(fig, name):
     print('  %s' % name)
 
 
+USE_V2 = False  # Set by --v2 flag
+
+
 def get_run_dir(run, use_excess):
-    """Get results directory for a run."""
+    """Get results directory for a run.
+    Structok runs have no -v2 variant (probed with v2 probes from the start)."""
+    if USE_V2 and run not in STRUCTOK_RUNS:
+        if use_excess:
+            return RESULTS_DIR / ('%s-v2-excess' % run)
+        return RESULTS_DIR / ('%s-v2' % run)
     if use_excess:
         return RESULTS_DIR / ('%s-excess' % run)
     return RESULTS_DIR / run
@@ -148,10 +163,13 @@ def load_timeline(run_dir):
     return steps, type_counts, avg_spec, avg_entropy, np.array(layer_spec)
 
 
+ALL_RUNS = ['baseline', 'comparison', 'seed2', 'nl-barrier', 'structok-baseline', 'structok-comparison']
+
+
 def get_available_runs(use_excess):
     """Return list of runs that have data."""
     runs = []
-    for run in ['baseline', 'comparison', 'seed2', 'nl-barrier']:
+    for run in ALL_RUNS:
         if run_exists(run, use_excess):
             runs.append(run)
     return runs
@@ -159,15 +177,24 @@ def get_available_runs(use_excess):
 
 # ── Charts ──
 
+def make_grid(n):
+    """Return (nrows, ncols) for arranging n panels. 2x3 for 5-6, 1xN for fewer."""
+    if n <= 4:
+        return 1, n
+    return 2, (n + 1) // 2
+
+
 def chart_developmental_timeline(use_excess=False):
     """Stacked area chart of head type distribution over training."""
     label = 'excess' if use_excess else 'raw'
     runs = get_available_runs(use_excess)
-    ncols = len(runs)
+    nrows, ncols = make_grid(len(runs))
 
-    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 6))
-    if ncols == 1:
-        axes = [axes]
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 5 * nrows))
+    axes = np.array(axes).flatten()
+    # Hide unused axes
+    for i in range(len(runs), len(axes)):
+        axes[i].set_visible(False)
 
     for ax, run in zip(axes, runs):
         run_dir = get_run_dir(run, use_excess)
@@ -180,7 +207,7 @@ def chart_developmental_timeline(use_excess=False):
                            color=COLORS[b], label=b)
             bottom += vals
         ax.set_ylim(0, 384)
-        ax.legend(loc='center right', fontsize=7, facecolor=LEGEND_BG,
+        ax.legend(loc='center right', fontsize=6, facecolor=LEGEND_BG,
                  edgecolor=GRID, labelcolor=TEXT)
 
     fig.suptitle('Attention Head Atlas: Developmental Timeline (%s scores)' % label,
@@ -203,7 +230,7 @@ def chart_entropy_three_way(use_excess=False):
                label=RUN_LABELS.get(run, run))
 
     ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
-    save(fig, 'entropy-three-way')
+    save(fig, 'entropy-all-runs')
 
 
 def chart_p0_emergence(use_excess=False):
@@ -248,11 +275,12 @@ def chart_layer_depth(use_excess=False):
     """Heatmap of per-layer specialization index over training."""
     label = 'excess' if use_excess else 'raw'
     runs = get_available_runs(use_excess)
-    ncols = len(runs)
+    nrows, ncols = make_grid(len(runs))
 
-    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 8))
-    if ncols == 1:
-        axes = [axes]
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 6 * nrows))
+    axes = np.array(axes).flatten()
+    for i in range(len(runs), len(axes)):
+        axes[i].set_visible(False)
 
     for ax, run in zip(axes, runs):
         run_dir = get_run_dir(run, use_excess)
@@ -273,11 +301,12 @@ def chart_polysemanticity(use_excess=False):
     """Specialist vs generalist head counts over training."""
     label = 'excess' if use_excess else 'raw'
     runs = get_available_runs(use_excess)
-    ncols = len(runs)
+    nrows, ncols = make_grid(len(runs))
 
-    fig, axes = plt.subplots(1, ncols, figsize=(5 * ncols, 6))
-    if ncols == 1:
-        axes = [axes]
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 5 * nrows))
+    axes = np.array(axes).flatten()
+    for i in range(len(runs), len(axes)):
+        axes[i].set_visible(False)
 
     for ax, run in zip(axes, runs):
         run_dir = get_run_dir(run, use_excess)
@@ -366,7 +395,7 @@ def find_largest_circuit(run_dir):
     if not files:
         return []
 
-    score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+    score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate', 'spacing']
     num_heads = 384
     trajectories = np.zeros((num_heads, len(files), len(score_keys)))
 
@@ -409,8 +438,8 @@ def find_largest_circuit(run_dir):
 def chart_circuit_comparison():
     """Visualize circuit positions for all available runs."""
     runs_to_compare = []
-    for run in ['baseline', 'comparison', 'seed2', 'nl-barrier']:
-        run_dir = RESULTS_DIR / ('%s-excess' % run)
+    for run in ALL_RUNS:
+        run_dir = get_run_dir(run, use_excess=True)
         if not run_dir.exists():
             continue
         largest = find_largest_circuit(run_dir)
@@ -420,10 +449,11 @@ def chart_circuit_comparison():
     if len(runs_to_compare) < 2:
         return
 
-    ncols = len(runs_to_compare)
-    fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 7))
-    if ncols == 1:
-        axes = [axes]
+    nrows, ncols = make_grid(len(runs_to_compare))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 6 * nrows))
+    axes = np.array(axes).flatten()
+    for i in range(len(runs_to_compare), len(axes)):
+        axes[i].set_visible(False)
 
     # Collect all circuits for overlap detection
     all_circuits = {name: set(circuit) for name, circuit in runs_to_compare}
@@ -515,6 +545,168 @@ def chart_emergence_order(use_excess=False):
     save(fig, 'emergence-order-%s' % label)
 
 
+def chart_frustration_gap_emergence(use_excess=False):
+    """Frustration gap over training steps for structok corpus runs."""
+    structok_runs = ['structok-baseline', 'structok-comparison']
+    available = [r for r in structok_runs if run_exists(r, use_excess)]
+    if not available:
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    setup_ax(ax, 'Frustration Gap Emergence (Structok Corpus)\n'
+             'Gap appears on structured data, merge barriers prevent it',
+             xlabel='Training step', ylabel='Frustration gap (pp)')
+
+    for run in available:
+        run_dir = get_run_dir(run, use_excess)
+        files = sorted(run_dir.glob('step-*.json'))
+        steps = []
+        gaps = []
+        for f in files:
+            with open(f) as fh:
+                d = json.load(fh)
+            steps.append(int(f.stem.replace('step-', '')))
+            fg = d.get('raw_scores', {}).get('frustration_gap', {})
+            gaps.append(fg.get('gap', 0) * 100)  # convert to pp
+
+        ax.plot(steps, gaps, color=RUN_COLORS.get(run, '#888888'), linewidth=2,
+               label=RUN_LABELS.get(run, run))
+
+    ax.axhline(y=0, color=GRID, linewidth=0.5, linestyle='--')
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+    save(fig, 'frustration-gap-emergence')
+
+
+def chart_ablation_comparison(use_excess=False):
+    """Bar chart comparing ablation deltas across three models."""
+    ablation_dir = RESULTS_DIR / 'ablation'
+    if not ablation_dir.exists():
+        return
+
+    models = []
+    for name, fname in [('FineWeb\nbaseline', 'ablation-baseline.json'),
+                         ('Structok\nbaseline', 'ablation-structok-baseline.json'),
+                         ('Comparison\n(barriers)', 'ablation-comparison.json')]:
+        path = ablation_dir / fname
+        if not path.exists():
+            continue
+        with open(path) as f:
+            d = json.load(f)
+        models.append((name, d))
+
+    if not models:
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    setup_ax(ax, 'Spacing Head Ablation: Mandatory Damage Repair\n'
+             'Removing spacing heads hurts more than removing random heads',
+             ylabel='PPL change (%)')
+
+    x = np.arange(len(models))
+    width = 0.25
+    edge = GRID if LIGHT else BG
+
+    spacing_deltas = [m[1]['spacing_ablation']['delta_pct'] for m in models]
+    random_deltas = [m[1]['random_controls']['mean_delta_pct'] for m in models]
+    p0_deltas = [m[1].get('p0_ablation', {}).get('delta_pct', 0) for m in models]
+
+    ax.bar(x - width, spacing_deltas, width, label='Spacing heads removed',
+           color='#ec4899', edgecolor=edge, linewidth=0.5)
+    ax.bar(x, random_deltas, width, label='Random heads removed (control)',
+           color='#888888', edgecolor=edge, linewidth=0.5)
+    ax.bar(x + width, p0_deltas, width, label='P0 heads removed',
+           color='#ff4444', edgecolor=edge, linewidth=0.5)
+
+    ax.axhline(y=0, color=GRID, linewidth=0.5, linestyle='--')
+    ax.set_xticks(x)
+    ax.set_xticklabels([m[0] for m in models], fontsize=10)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    # Add value labels
+    for i, (s, r, p) in enumerate(zip(spacing_deltas, random_deltas, p0_deltas)):
+        ax.text(i - width, s + 1, '%+.1f%%' % s, ha='center', va='bottom', fontsize=8, color=TEXT)
+        ax.text(i, r + 1 if r >= 0 else r - 3, '%+.1f%%' % r, ha='center',
+                va='bottom' if r >= 0 else 'top', fontsize=8, color=TEXT)
+        ax.text(i + width, p + 1, '%+.1f%%' % p, ha='center', va='bottom', fontsize=8, color=TEXT)
+
+    save(fig, 'ablation-comparison')
+
+
+def chart_ablation_per_text(use_excess=False):
+    """Horizontal bar chart of per-text degradation from spacing ablation."""
+    path = RESULTS_DIR / 'ablation' / 'ablation-baseline.json'
+    if not path.exists():
+        return
+
+    with open(path) as f:
+        d = json.load(f)
+
+    baseline_texts = d['baseline']['per_text']
+    spacing_texts = d['spacing_ablation']['per_text']
+
+    texts = []
+    deltas = []
+    for name in sorted(baseline_texts.keys()):
+        base = baseline_texts[name]
+        ablated = spacing_texts[name]
+        delta = (ablated - base) / base * 100
+        texts.append(name)
+        deltas.append(delta)
+
+    # Sort by delta descending
+    pairs = sorted(zip(texts, deltas), key=lambda x: -x[1])
+    texts = [p[0] for p in pairs]
+    deltas = [p[1] for p in pairs]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    setup_ax(ax, 'Task Dependency on Spacing Recovery\n'
+             'PPL degradation when 183 spacing heads are removed (FineWeb baseline)',
+             xlabel='PPL change (%)')
+
+    edge = GRID if LIGHT else BG
+    bars = ax.barh(range(len(texts)), deltas, color='#ec4899', edgecolor=edge, linewidth=0.5)
+
+    ax.set_yticks(range(len(texts)))
+    ax.set_yticklabels(texts, fontsize=10)
+    ax.invert_yaxis()
+
+    for bar, delta in zip(bars, deltas):
+        ax.text(bar.get_width() + 5, bar.get_y() + bar.get_height() / 2,
+               '%+.1f%%' % delta, va='center', fontsize=9, color=TEXT)
+
+    save(fig, 'ablation-per-text')
+
+
+def chart_capacity_tax(use_excess=False):
+    """Stacked bar showing head allocation: spacing, P0, productive."""
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+    # Baseline
+    ax = axes[0]
+    setup_ax(ax, 'Standard BPE\n(FineWeb baseline)', ylabel='Heads')
+    categories = ['Spacing\n(damage repair)', 'P0 sinks\n(doing nothing)', 'Productive']
+    counts = [183, 32, 384 - 183 - 32]
+    colors_list = ['#ec4899', '#ff4444', '#22c55e']
+    edge = GRID if LIGHT else BG
+    ax.bar(categories, counts, color=colors_list, edgecolor=edge, linewidth=0.5)
+    for i, c in enumerate(counts):
+        ax.text(i, c + 5, '%d\n(%.0f%%)' % (c, c / 384 * 100), ha='center', fontsize=9, color=TEXT)
+    ax.set_ylim(0, 250)
+
+    # Comparison
+    ax = axes[1]
+    setup_ax(ax, 'Merge Barriers\n(comparison)', ylabel='Heads')
+    counts = [13, 40, 384 - 13 - 40]
+    ax.bar(categories, counts, color=colors_list, edgecolor=edge, linewidth=0.5)
+    for i, c in enumerate(counts):
+        ax.text(i, c + 5, '%d\n(%.0f%%)' % (c, c / 384 * 100), ha='center', fontsize=9, color=TEXT)
+    ax.set_ylim(0, 400)
+
+    fig.suptitle('The Capacity Tax: 56% of Standard BPE Heads Are Non-Productive',
+                fontsize=13, fontweight='bold', color=TEXT)
+    save(fig, 'capacity-tax')
+
+
 ALL_CHARTS = [
     chart_developmental_timeline,
     chart_entropy_three_way,
@@ -524,6 +716,10 @@ ALL_CHARTS = [
     chart_polysemanticity,
     chart_seed_comparison,
     chart_emergence_order,
+    chart_frustration_gap_emergence,
+    chart_ablation_comparison,
+    chart_ablation_per_text,
+    chart_capacity_tax,
 ]
 
 STANDALONE_CHARTS = [
@@ -537,7 +733,12 @@ if __name__ == '__main__':
     parser.add_argument('--both-themes', action='store_true', help='Generate both themes')
     parser.add_argument('--use-excess', action='store_true', help='Use excess-corrected data')
     parser.add_argument('--both-scores', action='store_true', help='Generate raw and excess charts')
+    parser.add_argument('--v2', action='store_true', help='Use v2 probe data (with spacing)')
     args = parser.parse_args()
+
+    if args.v2:
+        import generate_atlas as _self
+        _self.USE_V2 = True
 
     themes = [True, False] if args.both_themes else [not args.dark]
     score_modes = [False, True] if args.both_scores else [args.use_excess]

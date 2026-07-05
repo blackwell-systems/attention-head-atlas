@@ -21,7 +21,7 @@ import numpy as np
 from pathlib import Path
 
 
-BEHAVIORS = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+BEHAVIORS = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate', 'spacing']
 
 
 def compute_base_rates(step0_path):

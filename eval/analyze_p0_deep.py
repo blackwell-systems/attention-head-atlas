@@ -19,7 +19,7 @@ from pathlib import Path
 from collections import deque
 
 RESULTS_DIR = Path(__file__).parent.parent / 'results'
-BEHAVIORS = ['delimiter', 'duplicate', 'bracket', 'positional_prev', 'positional_p0', 'induction', 'unclassified']
+BEHAVIORS = ['delimiter', 'duplicate', 'bracket', 'positional_prev', 'positional_p0', 'induction', 'spacing', 'unclassified']
 
 
 def load_all_classifications(run):
@@ -192,7 +192,7 @@ def main():
         run_dir = RESULTS_DIR / run
         files = sorted(run_dir.glob('step-*.json'))
 
-        score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate']
+        score_keys = ['positional_prev', 'positional_p0', 'induction', 'delimiter', 'bracket', 'duplicate', 'spacing']
         num_heads = 384
         trajectories = np.zeros((num_heads, len(files), len(score_keys)))
 

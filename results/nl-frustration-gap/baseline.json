@@ -1,0 +1,76 @@
+{
+  "run": "baseline",
+  "timestamp": "2026-07-04T18:29:11Z",
+  "results": {
+    "prose": {
+      "struct_gap": {
+        "gap": 0.0,
+        "gap_pp": 0.0,
+        "heads_woke": 0,
+        "total_heads": 384,
+        "normal_mean": 0.0,
+        "clean_mean": 0.0,
+        "positions_matched": 0,
+        "total_positions": 166
+      },
+      "nl_gap": {
+        "gap": 0.0,
+        "gap_pp": 0.0,
+        "heads_woke": 0,
+        "total_heads": 384,
+        "normal_mean": 0.0,
+        "clean_mean": 0.0,
+        "positions_matched": 0,
+        "total_positions": 166
+      }
+    },
+    "code": {
+      "struct_gap": {
+        "gap": -0.00275,
+        "gap_pp": -0.28,
+        "heads_woke": 78,
+        "total_heads": 384,
+        "normal_mean": 0.290645,
+        "clean_mean": 0.287894,
+        "positions_matched": 95,
+        "total_positions": 279
+      },
+      "nl_gap": {
+        "gap": -0.011868,
+        "gap_pp": -1.19,
+        "heads_woke": 67,
+        "total_heads": 384,
+        "normal_mean": 0.20557,
+        "clean_mean": 0.193702,
+        "positions_matched": 58,
+        "total_positions": 279
+      }
+    },
+    "structured": {
+      "struct_gap": {
+        "gap": 0.000372,
+        "gap_pp": 0.04,
+        "heads_woke": 11,
+        "total_heads": 384,
+        "normal_mean": 0.248949,
+        "clean_mean": 0.249321,
+        "positions_matched": 115,
+        "total_positions": 371
+      },
+      "nl_gap": {
+        "gap": 0.0,
+        "gap_pp": 0.0,
+        "heads_woke": 0,
+        "total_heads": 384,
+        "normal_mean": 0.105766,
+        "clean_mean": 0.105766,
+        "positions_matched": 52,
+        "total_positions": 371
+      }
+    }
+  },
+  "summary": {
+    "struct_gap_avg": -0.000793,
+    "nl_gap_avg": -0.003956
+  }
+}

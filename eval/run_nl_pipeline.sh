@@ -55,7 +55,7 @@ echo "Step 6: Uploading results to R2..."
 python3 -c "
 import boto3
 from pathlib import Path
-s3 = boto3.client('s3', endpoint_url='https://b5e39abd50c5b82163c5fe72db9b880e.r2.cloudflarestorage.com', aws_access_key_id='d77b3d0a3829377b3b71ffc11f610435', aws_secret_access_key='9206e3609275a5b8655d5c5b0f3faf536415e324f4493cfe3ce2b4ffb53e0244')
+s3 = boto3.client('s3', endpoint_url=os.environ['R2_ENDPOINT'], aws_access_key_id=os.environ['R2_ACCESS_KEY'], aws_secret_access_key=os.environ['R2_SECRET_KEY'])
 
 # Upload tokenizer
 s3.upload_file('/root/tokenizers/nl-barrier-64k.json', 'structok-training', 'atlas/tokens/nl-barrier-64k.json')
