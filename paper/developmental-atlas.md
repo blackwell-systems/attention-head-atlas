@@ -498,6 +498,16 @@ The task-dependency hierarchy reveals which behaviors rely most on whitespace bo
 
 Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at `atlas/results/ablation/`.
 
+### 4.14 UMAP Visualization of Head Specialization
+
+Wang et al. (2025b) introduced UMAP projections of per-token susceptibility vectors as a tool for visualizing transformer internal organization. Their "rainbow serpent" (Figure 1 in their paper) showed the body plan of a 3M parameter model with 16 attention heads, revealing a small green appendage they named the "spacing fin."
+
+We apply the same approach at 410M scale with 384 heads, projecting head behavior score vectors into a joint 2D embedding across all six runs. The result reveals that spacing, which appeared as a fin at 3M, dominates the 410M landscape.
+
+![Figure 10: Head behavior UMAP across all six runs. Baseline and seed2 show identical pink spacing clusters consuming nearly half the embedding space. Merge-barrier models (comparison, NL-barrier) show no spacing cluster. Structok-baseline shows the same spacing cluster plus additional delimiter heads. All six runs are embedded in the same coordinate space for direct comparison. Wang et al. (2025b) discovered the spacing fin as a small appendage on a 3M model; at 410M, it is the dominant structure.](../charts/umap-comparison.png){ width=95% }
+
+The UMAP makes three features of the capacity tax visible at a glance. First, the pink spacing cluster in the baseline and seed2 panels is the largest structure in the embedding, confirming that spacing is the dominant head specialization. Second, the spacing cluster is absent in both barrier model panels, confirming that merge barriers eliminate the tax. Third, the baseline and seed2 panels are nearly identical (consistent with r=0.992 distribution correlation), confirming that the spacing tax is deterministic.
+
 ## 5. Discussion
 
 ### 5.1 The Capacity Tax: P0 Collapse and Mandatory Spacing Recovery
