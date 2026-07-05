@@ -41,8 +41,25 @@ def compute_base_rates(step0_path):
     return base_rates, probes
 
 
-def classify_with_excess(result, base_rates, probes, num_layers=24, num_heads=16):
-    """Reclassify heads using excess scores."""
+def classify_with_excess(result, base_rates, probes, num_layers=None, num_heads=None):
+    """Reclassify heads using excess scores. Detects head count from raw data if not specified."""
+    if num_layers is None or num_heads is None:
+        # Detect from raw scores
+        for probe_name in probes:
+            probe_data = result['raw_scores'].get(probe_name, {})
+            for b in BEHAVIORS:
+                if b in probe_data:
+                    if num_layers is None:
+                        num_layers = len(probe_data[b])
+                    if num_heads is None:
+                        num_heads = len(probe_data[b][0])
+                    break
+            if num_layers and num_heads:
+                break
+        if num_layers is None:
+            num_layers = 24
+        if num_heads is None:
+            num_heads = 16
     classifications = []
 
     for layer in range(num_layers):

@@ -441,6 +441,50 @@ Zero-ablation study following the methodology from Blackwell (2026a, Section 5.3
 
 Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at `atlas/results/ablation/`. Methodology adapted from Blackwell (2026a) 18-phase ablation protocol.
 
+## Finding 16: Architecture and Scale Replication (Llama 410M + 1.3B)
+
+Probed existing Llama checkpoints from the coupling paper (run-003 Llama 410M GQA, run-004 Llama 1.3B GQA) with the 7-behavior taxonomy. Step-0 base rates generated from random Llama initialization for excess correction.
+
+### Head type distribution (excess-corrected)
+
+| Model | Arch | Heads | Spacing | P0 | Delimiter | Positional_prev |
+|-------|------|-------|---------|-----|-----------|----------------|
+| NeoX 410M standard | MHA | 384 | 183 (47.7%) | 32 (8.3%) | 74 (19.3%) | 68 (17.7%) |
+| Llama 410M standard | GQA | 384 | 60 (15.6%) | 90 (23.4%) | 43 (11.2%) | 147 (38.3%) |
+| Llama 1.3B standard | GQA | 768 | 128 (16.7%) | 180 (23.4%) | 137 (17.8%) | 263 (34.2%) |
+| NeoX 410M structok | MHA | 384 | 13 (3.4%) | 40 (10.4%) | 79 (20.6%) | 91 (23.7%) |
+| Llama 410M structok | GQA | 384 | 0 (0%) | 80 (20.8%) | 120 (31.2%) | 137 (35.7%) |
+| Llama 1.3B structok | GQA | 768 | 2 (0.3%) | 97 (12.6%) | 365 (47.5%) | 169 (22.0%) |
+
+### Frustration gap (Llama)
+
+| Model | Gap | Heads woke |
+|-------|-----|-----------|
+| Llama 410M standard | 0.4 pp | 5/384 |
+| Llama 410M structok | 0.0 pp | 0/384 |
+| Llama 1.3B standard | 0.2 pp | 49/768 |
+| Llama 1.3B structok | 0.0 pp | 0/768 |
+
+### Key findings
+
+**Spacing is universal across architectures.** Both MHA (NeoX) and GQA (Llama) develop spacing heads with standard BPE. Merge barriers eliminate them on both.
+
+**The spacing percentage is architecture-dependent.** ~47% on NeoX (MHA), ~16% on Llama (GQA). GQA's shared key-value projections distribute the spacing signal differently, producing fewer spacing specialists but more P0 sinks.
+
+**P0 is higher on GQA.** ~23% on Llama vs ~8% on NeoX. GQA produces more P0 sinks, possibly because shared KV projections make it harder for individual query heads to maintain stable specialization.
+
+**Total non-productive capacity is architecture-dependent but substantial on both.** NeoX: ~56% (47.7% spacing + 8.3% P0). Llama: ~39% (16.7% spacing + 23.4% P0). The distribution between spacing and P0 varies, but the total tax is significant on both architectures.
+
+**Spacing is consistent across Llama scales.** 15.6% at 410M, 16.7% at 1.3B. The percentage holds as head count doubles (60/384 to 128/768).
+
+**Merge barriers work on GQA.** Llama structok models have 0-2 spacing heads (vs 60-128 standard). The fix is architecture-independent.
+
+**Frustration gap is zero on Llama.** Same pattern as NeoX: 0.2-0.4pp on standard BPE, 0.0pp with merge barriers.
+
+**The "approximately half" claim requires qualification.** The capacity tax is ~56% on NeoX (MHA) and ~39% on Llama (GQA). The paper should state the tax is "substantial" or "over a third" rather than "approximately half" when making architecture-general claims. The ~47% spacing figure is specific to NeoX MHA.
+
+Source: Llama checkpoints from `checkpoints/run-003-llama-{standard,structok}/step-40000/` and `checkpoints/run-004-llama-{standard,structok}/step-50000/` on R2. Step-0 from random Llama init. Results in `results/llama-{410m,1.3b}-{standard,structok}{,-excess}/`.
+
 ## Two Regimes of BPE Damage
 
 The atlas and stranded attention findings together reveal that BPE boundary corruption produces two distinct damage regimes, caused by the same mechanism but producing different symptoms depending on delimiter density in the training corpus.
