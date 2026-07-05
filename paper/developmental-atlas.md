@@ -229,6 +229,8 @@ This is consistent with the P0 failure cascade: more P0 sinks means more heads r
 
 Entropy trajectories are seed-independent. Both baseline and seed2 follow the same curve: high at initialization (approximately 3.7 to 4.5), crash to approximately 0.38 by step 5,000, then rise to approximately 0.67 to 0.70 by step 20,000. The entropy divergence between standard BPE and merge barriers is architecture-determined, not seed-dependent.
 
+On the structok corpus, the pattern inverts: structok-baseline has lower entropy (0.096) than structok-comparison (0.168). The structured data provides strong enough delimiter signal that even standard BPE develops highly focused attention. The entropy relationship between standard BPE and merge barriers is corpus-dependent, consistent with the two-regime model (Section 4.4).
+
 ![Figure 3: Mean attention entropy over training for all six runs.](../charts/entropy-all-runs.png){ width=85% }
 
 ### 4.4 Frustration Gap and the Two-Regime Model
