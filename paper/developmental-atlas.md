@@ -2,7 +2,7 @@
 title: "Developmental Atlas of Attention Head Specialization: Spacing, Stranding, and the Capacity Tax of BPE Tokenization"
 author: "Dayna Blackwell, Blackwell Systems"
 date: "2026-07-04"
-subtitle: "dayna@blackwell-systems.com"
+subtitle: "dayna@blackwell-systems.com · DOI: 10.5281/zenodo.21205390"
 titlepage: true
 titlepage-color: "0a0a0a"
 titlepage-text-color: "18befc"
