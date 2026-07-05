@@ -107,7 +107,9 @@ atlas/
 - NL-barrier: ~$2.50 (completed)
 - v2 re-probe (all 4 runs): ~$0.80 (completed, 2x RTX 4090)
 - Structok corpus (2 runs): ~$7.00 (completed, training + probing across 4 instances)
-- Total spent: ~$17.80
+- Ablation study (3 models): ~$0.30 (completed, inference only)
+- UMAP extraction (2 models): ~$0.10 (completed, inference only)
+- Total spent: ~$18.20
 
 ## Status (2026-07-04)
 

@@ -2,6 +2,8 @@
 
 **Paper:** [Developmental Atlas of Attention Head Specialization: Spacing, Stranding, and the Capacity Tax of BPE Tokenization](paper/developmental-atlas.pdf)
 
+**DOI:** [10.5281/zenodo.21205390](https://doi.org/10.5281/zenodo.21205390)
+
 **Author:** Dayna Blackwell, Blackwell Systems
 
 The first comprehensive developmental atlas of attention head specialization at realistic scale. We track 384 heads across 7 behavior types, 131 checkpoints, 6 training runs, and 2 corpora, revealing that standard BPE wastes ~45% of attention heads on whitespace boundary recovery regardless of corpus composition.
@@ -22,7 +24,7 @@ This is the third paper in a research program on tokenizer-attention coupling:
 
 1. **Tokenizer-Attention Coupling** (DOI: [10.5281/zenodo.20925910](https://doi.org/10.5281/zenodo.20925910)): Proves BPE merge decisions permanently shape which attention heads develop. 3 domains, 2 architectures (GPT-NeoX, Llama), 2 scales (410M, 1.3B).
 2. **Stranded Attention** (DOI: [10.5281/zenodo.21158886](https://doi.org/10.5281/zenodo.21158886)): Characterizes the frustration gap: 40pp of structural attention capacity permanently locked away. 384/384 heads at 410M, 768/768 at 1.3B.
-3. **Developmental Atlas** (this paper): Tracks all head types simultaneously from step 0 to convergence. Discovers spacing as dominant specialization, the two-regime model of BPE damage, and circuits as developmentally protective.
+3. **Developmental Atlas** (DOI: [10.5281/zenodo.21205390](https://doi.org/10.5281/zenodo.21205390), this paper): Tracks all head types simultaneously from step 0 to convergence. Discovers spacing as dominant specialization, the two-regime model of BPE damage, the capacity tax (~56% of heads non-productive), and circuits as developmentally protective.
 
 ## Runs
 
@@ -114,7 +116,8 @@ cd charts && python generate_atlas.py --v2 --use-excess --both-themes
          Stranding, and the Capacity Tax of BPE Tokenization},
   author={Blackwell, Dayna},
   year={2026},
-  note={Blackwell Systems}
+  doi={10.5281/zenodo.21205390},
+  publisher={Zenodo}
 }
 ```
 
