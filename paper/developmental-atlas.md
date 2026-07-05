@@ -630,7 +630,7 @@ Olsson, C., Elhage, N., Nanda, N., et al. (2022). In-context learning and induct
 
 Riviere, M., & Trott, S. (2025). Start making sense(s): tracking when attention heads specialize on word senses. *arXiv:2511.21974*.
 
-Sandoval-Segura, P., et al. (2025). Dormant attention heads are quietly effective. *arXiv:2410.13835*.
+Sandoval-Segura, P., et al. (2025). Active-dormant attention heads: mechanistically demystifying extreme-token phenomena in LLMs. *arXiv:2410.13835*.
 
 Voita, E., Talbot, D., Moiseev, F., Sennrich, R., & Titov, I. (2019). Analyzing multi-head self-attention: specialized heads do the heavy lifting, the rest can be pruned. *ACL*.
 
