@@ -490,11 +490,15 @@ Spacing heads are not expendable. They are mandatory damage repair. They are pro
 
 The task-dependency hierarchy reveals which behaviors rely most on whitespace boundary recovery. Duplicate token detection degrades catastrophically (+405%) because identifying repeated tokens requires knowing where token boundaries are. Code and bracket processing degrade ~60%, consistent with their dependence on structural delimiters. Prose degrades least (~35%), consistent with natural language's redundant boundary signals (capitalization, context).
 
+![Figure 11: Per-text degradation when spacing heads are removed (FineWeb baseline). Duplicate detection depends most on whitespace boundary recovery (+405%), followed by code and brackets (~60%), then prose (~35%).](../charts/ablation-per-text.png){ width=85% }
+
 **P0 heads are genuinely useless (causal proof).** Removing 32 to 40 P0 heads produces less than 1.5% PPL change across all three models. This converts the correlational finding (100% circuit isolation, Section 4.5) into causal evidence: P0 heads contribute nothing to model performance. They are a pure failure mode, confirming the answer to Gu et al.'s first open question with a direct intervention rather than observational data alone.
 
 **The capacity tax.** In our baseline model, standard BPE imposes an approximately 56% attention capacity tax: 47% on mandatory whitespace boundary recovery (183 heads that cannot be removed without +64% degradation) and 8% on P0 collapse (32 heads contributing nothing, confirmed by +1.4% ablation change). The recovery tax is productive work, not a failure: these heads are doing essential computation. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. This tax is not recoverable through training, pruning, or fine-tuning. Only changing the tokenizer eliminates it.
 
 ![Figure 9: Ablation comparison across three models.](../charts/ablation-comparison.png){ width=85% }
+
+![Figure 12: The capacity tax. Standard BPE baseline (left): 183 heads on mandatory spacing recovery, 32 on P0 collapse, 169 productive. Merge-barrier comparison (right): 13 spacing, 40 P0, 331 productive. Merge barriers convert the spacing tax into available capacity.](../charts/capacity-tax.png){ width=85% }
 
 Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at `atlas/results/ablation/`.
 
