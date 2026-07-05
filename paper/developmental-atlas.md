@@ -71,7 +71,7 @@ Xu (2026) studied when attention circuits form, finding induction heads emerge a
 
 Xiao et al. (2024) characterized attention sinks as a training artifact where models learn to dump excess attention probability mass onto a fixed token (typically position zero). Sandoval-Segura et al. (2025) formalized dormant heads, finding that 4 to 16% of heads in trained models are dormant, and proposed a binary framework (active vs. dormant).
 
-Gu et al. (2025), in their ICLR 2025 paper "When Attention Sink Emerges in Language Models," provided the most detailed mechanistic account, showing that the sink mechanism emerges after effective optimization begins. They posed two open questions in their future work section. First: "It remains unclear whether attention sink benefits LM downstream performance." Second: "We will extend the research scope to explore how these sink tokens are related to the pre-training." Our atlas addresses both questions directly. We show that P0 sinks are a failure mode (genuine P0 heads are 100% isolated from co-specializing circuits), and we show that the tokenizer (a pre-training decision) determines how many heads sink.
+Gu et al. (2025), in their ICLR 2025 paper "When Attention Sink Emerges in Language Models," provided the most detailed mechanistic account, showing that the sink mechanism emerges after effective optimization begins. They posed two open questions in their future work section. First: "It remains unclear whether attention sink benefits LM downstream performance." Second: "We will extend the research scope to explore how these sink tokens are related to the pre-training." Our atlas addresses both questions directly. We show that P0 sinks are a failure mode (genuine P0 heads are 100% isolated from co-specializing circuits, and ablation confirms they contribute nothing to performance; Section 4.13), and we show that the tokenizer (a pre-training decision) determines how many heads sink.
 
 ### 2.4 Merge Barriers
 
@@ -127,7 +127,7 @@ The spacing behavior was motivated by Wang et al. (2025b), who discovered a "spa
 
 In addition to the 7 behavior scores, we record two auxiliary metrics at each checkpoint: per-head attention entropy (a statistical property of the attention distribution) and a dormancy indicator approximating the HONOR metric (Sandoval-Segura et al., 2025). These auxiliary metrics inform analysis (entropy trajectories in Section 4.3, P0 identification) but are not used for head classification. Heads are classified by their dominant behavior among the 7 behavior types; heads with no behavior exceeding the base rate are classified as "unclassified." The P0 sink classification uses the positional (P0) behavior score, not the HONOR dormancy approximation. These are related but distinct: P0 sinking measures attention concentration on position zero, while HONOR dormancy measures low activation norms. In practice, the two largely overlap in our models, but the distinction matters for comparison with Sandoval-Segura et al. (2025).
 
-The six probe texts cover complementary domains: prose (no punctuation), code (Go source), structured data (GCF format), induction triggers (repeated sentences), duplicate tokens (repeated words), and brackets (real Go code with balanced bracket structures).
+The six probe texts cover complementary domains: prose (no punctuation), code (Go source), structured data (GCF format), induction triggers (repeated sentences), duplicate tokens (repeated words), and brackets (real Go code with balanced bracket structures). A seventh probe (punctuated prose) was used for the NL frustration gap experiment (Section 4.4) but not for the main probing.
 
 In addition to the 7 behavior probes and 2 auxiliary metrics, we measure the frustration gap at each checkpoint: the difference in delimiter attention between normal tokenization and forced-clean tokenization (where the input is segmented at each of the 16 barrier characters and each segment is tokenized independently). A nonzero frustration gap indicates that BPE merges are actively corrupting delimiter boundaries.
 
@@ -178,7 +178,7 @@ Source: excess-corrected probe results at step 20,000.
 
 ### 4.2 P0 Failure Cascade
 
-This is the paper's central mechanistic contribution. Attention heads do not start dormant. They become dormant after failing to specialize.
+Attention heads do not start dormant. They become dormant after failing to specialize.
 
 #### 4.2.1 Spacing Resolves the P0 Overcount
 
@@ -201,7 +201,7 @@ Tracking the 29 to 32 genuine P0 heads backward through 131 checkpoints reveals 
 | Positional_prev | 7 (7%) | 4 (6%) |
 | Bracket | 4 (4%) | 1 (2%) |
 
-Note: The prior-type analysis (Table 2) was performed before spacing was added to the taxonomy. Proportions for only the genuine P0 subset (29 to 32 heads) may differ.
+Note: Table 2 shows the full set of heads that were classified as P0 before spacing was added to the taxonomy (96 baseline, 64 seed2). The proportions reflect the prior types of all apparent P0 heads, including the 54 that were later reclassified as spacing. Proportions for only the 29 to 32 genuine P0 heads may differ.
 
 The cascade unfolds gradually, not as a phase transition. The earliest P0 collapses occur at step 100. The median sink step is 11,000. Individual heads give up at different times across training, consistent with a stochastic failure process rather than a coordinated phase transition.
 
@@ -213,7 +213,7 @@ Late layers are most vulnerable. Layer 23 and Layer 17 have the highest P0 conce
 
 **Connection to Gu et al. (2025).** Gu et al. showed that the P0 sink mechanism (the ability of position 0 to attract attention mass) emerges globally by step 1,000 to 2,000. Our finding extends this: the mechanism is available early, but individual heads do not collapse into it until much later (median step 11,000), after failing at other specializations. Gu et al. studied when the infrastructure appears. We study when heads decide to use it. This distinction resolves both of their stated open questions:
 
-1. *"It remains unclear whether attention sink benefits LM downstream performance."* Our data shows P0 sinks are a failure mode, not a benefit. The genuine P0 subset shows the try-fail-collapse pattern, and 100% are isolated from circuits. The model is better off without them.
+1. *"It remains unclear whether attention sink benefits LM downstream performance."* Our data shows P0 sinks are a failure mode, not a benefit. The genuine P0 subset shows the try-fail-collapse pattern, and 100% are isolated from circuits. The model loses nothing without them (ablation confirms +1.4% PPL change; Section 4.13).
 
 2. *"We will extend the research scope to explore how these sink tokens are related to the pre-training."* The tokenizer is the connection. Standard BPE produces 29 to 32 genuine P0 heads (plus 183 spacing heads). Merge barriers change this distribution by keeping delimiter boundaries clean, eliminating spacing proliferation and altering the P0 landscape. Same architecture, same data, only the tokenizer differs.
 
@@ -285,7 +285,7 @@ This is the first demonstration of circuit discovery through developmental co-sp
 
 ### 4.6 Developmental Sequence
 
-Head differentiation begins by step 50 and proceeds rapidly through step 500. By step 2,000, the head type distribution has largely stabilized. This timeline is consistent across all four runs, regardless of tokenizer or seed.
+Head differentiation begins by step 50 and proceeds rapidly through step 500. By step 2,000, the head type distribution has largely stabilized. This timeline is consistent across all runs, regardless of tokenizer or seed.
 
 At step 0, with excess correction, all heads are classified as "unclassified" (no genuine specialization above base rate). This is the expected result for random initialization and validates the excess methodology. Without excess correction, raw scores incorrectly suggest that all heads start as "delimiter" specialists, an artifact of probe-specific base rates.
 
@@ -490,7 +490,7 @@ The task-dependency hierarchy reveals which behaviors rely most on whitespace bo
 
 **P0 heads are genuinely useless (causal proof).** Removing 32 to 40 P0 heads produces less than 1.5% PPL change across all three models. This converts the correlational finding (100% circuit isolation, Section 4.5) into causal evidence: P0 heads contribute nothing to model performance. They are a pure failure mode, confirming the answer to Gu et al.'s first open question with a direct intervention rather than observational data alone.
 
-**The capacity tax.** Standard BPE imposes an approximately 56% attention capacity tax: 47% on mandatory whitespace boundary recovery (183 heads that cannot be removed without +64% degradation) and 8% on P0 collapse (32 heads contributing nothing, confirmed by +1.4% ablation change). The 47% recovery tax is productive work, not a failure: these heads are doing essential computation. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. This tax is not recoverable through training, pruning, or fine-tuning. Only changing the tokenizer eliminates it.
+**The capacity tax.** In our baseline model, standard BPE imposes an approximately 56% attention capacity tax: 47% on mandatory whitespace boundary recovery (183 heads that cannot be removed without +64% degradation) and 8% on P0 collapse (32 heads contributing nothing, confirmed by +1.4% ablation change). The recovery tax is productive work, not a failure: these heads are doing essential computation. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. This tax is not recoverable through training, pruning, or fine-tuning. Only changing the tokenizer eliminates it.
 
 ![Figure 9: Ablation comparison across three models.](../charts/ablation-comparison.png){ width=85% }
 
