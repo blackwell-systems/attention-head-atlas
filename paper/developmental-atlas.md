@@ -644,7 +644,7 @@ Xu, Z. (2026). When do attention circuits form? *arXiv:2606.02378*.
 
 ## Reproducibility
 
-All experiments can be reproduced on a single GPU (A100 or RTX 4090). Total compute cost across all six runs is approximately $18.
+All experiments can be reproduced on a single GPU (A100 or RTX 4090).
 
 **Code.** All training, probing, and analysis scripts are available at github.com/blackwell-systems/attention-head-atlas. Training uses `eval/train_atlas.py`. Probing uses `eval/probe_heads.py` (7 behaviors including spacing, hardened with disk checks, verified uploads, OOM recovery, auto-versioning). Excess correction uses `eval/excess_score_correction.py`. Circuit discovery uses `eval/analyze_seed2.py` (position circuits) and `eval/analyze_velocity_circuits.py` (velocity circuits). P0 deep analysis uses `eval/analyze_p0_deep.py`. NL-barrier analysis uses `eval/analyze_nl_barrier.py`. NL frustration gap measurement uses `eval/measure_nl_frustration_gap.py`.
 
