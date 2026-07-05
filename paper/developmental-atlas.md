@@ -490,15 +490,15 @@ Spacing heads are not expendable. They are mandatory damage repair. They are pro
 
 The task-dependency hierarchy reveals which behaviors rely most on whitespace boundary recovery. Duplicate token detection degrades catastrophically (+405%) because identifying repeated tokens requires knowing where token boundaries are. Code and bracket processing degrade ~60%, consistent with their dependence on structural delimiters. Prose degrades least (~35%), consistent with natural language's redundant boundary signals (capitalization, context).
 
-![Figure 11: Per-text degradation when spacing heads are removed (FineWeb baseline). Duplicate detection depends most on whitespace boundary recovery (+405%), followed by code and brackets (~60%), then prose (~35%).](../charts/ablation-per-text.png){ width=85% }
+![Figure 9: Per-text degradation when spacing heads are removed (FineWeb baseline). Duplicate detection depends most on whitespace boundary recovery (+405%), followed by code and brackets (~60%), then prose (~35%).](../charts/ablation-per-text.png){ width=85% }
 
 **P0 heads are genuinely useless (causal proof).** Removing 32 to 40 P0 heads produces less than 1.5% PPL change across all three models. This converts the correlational finding (100% circuit isolation, Section 4.5) into causal evidence: P0 heads contribute nothing to model performance. They are a pure failure mode, confirming the answer to Gu et al.'s first open question with a direct intervention rather than observational data alone.
 
 **The capacity tax.** In our baseline model, standard BPE imposes an approximately 56% attention capacity tax: 47% on mandatory whitespace boundary recovery (183 heads that cannot be removed without +64% degradation) and 8% on P0 collapse (32 heads contributing nothing, confirmed by +1.4% ablation change). The recovery tax is productive work, not a failure: these heads are doing essential computation. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. This tax is not recoverable through training, pruning, or fine-tuning. Only changing the tokenizer eliminates it.
 
-![Figure 9: Ablation comparison across three models.](../charts/ablation-comparison.png){ width=85% }
+![Figure 10: Ablation comparison across three models.](../charts/ablation-comparison.png){ width=85% }
 
-![Figure 12: The capacity tax. Standard BPE baseline (left): 183 heads on mandatory spacing recovery, 32 on P0 collapse, 169 productive. Merge-barrier comparison (right): 13 spacing, 40 P0, 331 productive. Merge barriers convert the spacing tax into available capacity.](../charts/capacity-tax.png){ width=85% }
+![Figure 11: The capacity tax. Standard BPE baseline (left): 183 heads on mandatory spacing recovery, 32 on P0 collapse, 169 productive. Merge-barrier comparison (right): 13 spacing, 40 P0, 331 productive. Merge barriers convert the spacing tax into available capacity.](../charts/capacity-tax.png){ width=85% }
 
 Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at `atlas/results/ablation/`.
 
@@ -508,7 +508,7 @@ Wang et al. (2025b) introduced UMAP projections of per-token susceptibility vect
 
 We apply the same approach at 410M scale with 384 heads, projecting head behavior score vectors into a joint 2D embedding across all six runs. The result reveals that spacing, which appeared as a fin at 3M, dominates the 410M landscape.
 
-![Figure 10: Head behavior UMAP across all six runs. Baseline and seed2 show identical pink spacing clusters consuming nearly half the embedding space. Merge-barrier models (comparison, NL-barrier) show no spacing cluster. Structok-baseline shows the same spacing cluster plus additional delimiter heads. All six runs are embedded in the same coordinate space for direct comparison. Wang et al. (2025b) discovered the spacing fin as a small appendage on a 3M model; at 410M, it is the dominant structure.](../charts/umap-comparison.png){ width=95% }
+![Figure 12: Head behavior UMAP across all six runs. Baseline and seed2 show identical pink spacing clusters consuming nearly half the embedding space. Merge-barrier models (comparison, NL-barrier) show no spacing cluster. Structok-baseline shows the same spacing cluster plus additional delimiter heads. All six runs are embedded in the same coordinate space for direct comparison. Wang et al. (2025b) discovered the spacing fin as a small appendage on a 3M model; at 410M, it is the dominant structure.](../charts/umap-comparison.png){ width=95% }
 
 The UMAP makes three features of the capacity tax visible at a glance. First, the pink spacing cluster in the baseline and seed2 panels is the largest structure in the embedding, confirming that spacing is the dominant head specialization. Second, the spacing cluster is absent in both barrier model panels, confirming that merge barriers eliminate the tax. Third, the baseline and seed2 panels are nearly identical (consistent with r=0.992 distribution correlation), confirming that the spacing tax is deterministic.
 
