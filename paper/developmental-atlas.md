@@ -638,6 +638,8 @@ These findings address three communities. For **model providers**, the capacity 
 
 **Wang et al. (2025b)** applied UMAP to susceptibility vectors across training of a 3M parameter model. Their "embryology" lens (susceptibility to perturbation) is complementary to our attention-pattern lens. They noted the potential influence of the tokenizer on model structure but did not test it. We provide the controlled experiment that tests their observation. Their discovery of the "spacing fin" is confirmed at 410M scale: spacing is the dominant head specialization in standard BPE (183/384 heads, 47.7%), and the count is deterministic across seeds. Their prediction that spacing would be a major developmental structure was correct; our data reveals that it is in fact the single largest category of head specialization in standard BPE models trained on web text.
 
+**Wang and Murfet (2026)** developed a theoretical framework called "patterning," the dual of interpretability: given a desired internal structure, determine what training data produces it. Their approach inverts the susceptibility matrix to derive optimal data interventions for controlling circuit formation. In a 3M model, they demonstrate stunting the spacing fin by collapsing consecutive whitespace in training data, and growing a delimiter fin by expanding delimiter characters. These experiments are consistent with our empirical findings at 410M: merge barriers, which change the effective token distribution by preventing delimiter merges, eliminate spacing heads and increase delimiter heads. Their patterning framework provides a complementary theoretical lens for our results; our findings were obtained independently through controlled tokenizer experiments rather than through susceptibility-guided interventions. Their parenthesis balancing experiments (selecting between Nested and Equal-Count algorithms via data re-weighting) also connect to our bracket-closing benchmark, where the merge-barrier model (39 bracket heads) outperforms baseline (4 bracket heads).
+
 **Baherwani et al. (2026)** demonstrated that emergence is stochastic across seeds on synthetic tasks. Our seed variation analysis confirms partial stochasticity at realistic scale: the distribution correlation across seeds is r=0.992 (driven by deterministic spacing counts), but secondary behaviors and circuit positions vary. Their synthetic-task framework complements our naturalistic-corpus setting.
 
 **Xu (2026)** studied when attention circuits form, finding induction heads emerge at approximately 20 to 23 billion tokens and attention sinks emerge 10 to 20 times later. Our atlas operates at smaller scale (20,000 steps on 5 GB) but tracks all behavior types simultaneously and isolates the tokenizer as a variable. Xu's finding that sinks emerge much later than induction heads is consistent with our P0 cascade timeline: the P0 mechanism becomes available early (step 1,000 to 2,000), but individual heads collapse into it much later (median step 11,000), after induction heads have already stabilized (step 150).
@@ -688,7 +690,9 @@ Voita, E., Talbot, D., Moiseev, F., Sennrich, R., & Titov, I. (2019). Analyzing 
 
 Wang, L., Hu, J., Zhang, G., et al. (2025a). Differentiation and specialization of attention heads via the refined local learning coefficient. *ICLR 2025 Spotlight*. arXiv:2410.02984.
 
-Wang, L., Baker, L., Gordon, L., & Murfet, D. (2025b). Embryology of a language model. *arXiv:2508.00331*.
+Wang, G., Baker, G., Gordon, A., & Murfet, D. (2025b). Embryology of a language model. *arXiv:2508.00331*.
+
+Wang, G., & Murfet, D. (2026). Patterning: the dual of interpretability. *arXiv:2601.13548*.
 
 Xiao, G., Tian, Y., Chen, B., Han, S., & Lewis, M. (2024). Efficient streaming language models with attention sinks. *arXiv:2309.17453*.
 
