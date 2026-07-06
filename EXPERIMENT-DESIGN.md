@@ -563,7 +563,7 @@ The strongest result: coupled heads survive AND develop the same specialization 
 
 **Impact:** If successful, this is a standalone contribution to mechanistic interpretability: the first causal demonstration that developmental circuits protect heads from collapse. Independent of the tokenizer/spacing findings.
 
-### Remaining: Unclassified Head Identification (Activation Patching)
+### Completed: Unclassified Head Identification (Activation Patching) — NULL RESULT
 
 The merge-barrier comparison model has 95 unclassified heads (24.7%) with excess scores below 0.02 across all 7 measured behaviors. These heads are freed from the spacing tax and are doing something our taxonomy doesn't capture. Identifying what they do completes the picture of what a healthy model looks like.
 
@@ -669,18 +669,22 @@ At 410M/20K steps, the model may not have developed strong syntactic capabilitie
 
 If more than 20 heads remain unclassified after patching, sparse autoencoders (Bricken et al., 2023; Cunningham et al., 2024) become the next methodology.
 
-#### Cost
+#### Results (2026-07-06) — NULL RESULT
 
-Inference only. 11,400 forward passes on a 410M model, each ~50ms on a 4090. Total: ~10 minutes. Add control runs: ~15 minutes. Total compute: ~$0.10.
+All 95 unclassified heads and all 20 control heads showed near-zero patching effects for agreement, coreference, semantic, and local_context behaviors (abs_mean_effect < 0.001). The positional category produced the only nonzero signal (abs_mean_effect 0.002-0.039), but this was a design flaw: reversing the entire sequence produces a massive activation difference at every head, swamping the subtler behavioral signals.
 
-#### Why this matters
+**Interpretation:** At 410M/20K steps, the model has not developed the linguistic capabilities these probes test for. The freed heads are performing processing below the resolution of behavioral probes at this scale: likely content similarity via embedding space, local windowing, n-gram statistics, or diffuse contextual processing that doesn't map to named linguistic capabilities.
 
-The 95 unclassified heads are the answer to "what does a healthy model do with the capacity that merge barriers free up?" If they're doing syntax, coreference, and semantic processing, that directly demonstrates the practical value of merge barriers: not just fewer spacing heads, but more heads doing the work that matters for language understanding.
+**This is informative:** It sets a lower bound on the scale where freed capacity develops identifiable linguistic specialization. It also confirms that activation patching requires models with the target capability already present. At larger scale (1.3B+) or with more training, these probes may produce signal.
+
+**Next methodology:** Sparse autoencoders (Bricken et al., 2023; Cunningham et al., 2024), which decompose activations into interpretable features without requiring behavioral hypotheses. Or repeat patching at 1.3B scale where linguistic capabilities are stronger.
+
+**Cost:** ~$0.10, ~12 minutes on RTX 4090. Script: `eval/patch_unclassified_heads.py`. Results: `results/patching/patching-comparison.json`.
 
 ### Priority order
 
-1. **Unclassified head identification (activation patching)**: lowest cost (~$0.10), highest novelty (completes the atlas), uses existing infrastructure. Could be Paper 4.
-2. **Scale replication (1.3B or larger)**: highest value for addressing the remaining limitation, moderate cost.
+1. **Scale replication (1.3B or larger)**: highest value for addressing the remaining limitation, moderate cost. Could also enable patching re-run with stronger linguistic signal.
+2. **SAE analysis of unclassified heads**: decompose the 95 heads without behavioral hypotheses.
 3. **Circuit causality (regularization intervention)**: highest engineering effort, standalone contribution to interpretability.
 
 ## Relationship to Prior Work

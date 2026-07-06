@@ -531,6 +531,22 @@ Completion-based benchmark measuring next-token prediction accuracy on structura
 
 Source: `eval/benchmark_completion.py`. Results in `results/benchmark/`.
 
+## Finding 18: Activation Patching of Unclassified Heads (Null Result)
+
+Activation patching experiment to identify what the 95 unclassified heads in the merge-barrier comparison model are doing. Six behavior categories tested: subject-verb agreement, coreference, semantic similarity, local context, clause boundary, positional. 20 input pairs per behavior, 95 unclassified heads + 20 control heads.
+
+### Results
+
+All 95 unclassified heads and all 20 control heads showed near-zero patching effects for agreement, coreference, semantic, local_context, and clause_boundary behaviors (abs_mean_effect < 0.001). Only the positional category produced nonzero signal (0.002-0.039), but this was a design artifact: reversing the entire sequence produces massive activation differences at every head, swamping targeted behavioral signals.
+
+### Interpretation
+
+At 410M/20K steps, the model has not developed the linguistic capabilities these probes test for. The freed heads perform processing below the resolution of behavioral probes at this scale: likely content similarity via embedding space, local windowing, n-gram statistics, or diffuse contextual processing.
+
+**This is a clean null result, not a negative result.** It sets a lower bound on the scale where freed capacity develops identifiable linguistic specialization. The finding is informative: merge barriers at 410M eliminate spacing heads and improve structural token prediction (Finding 17), but they do not produce identifiable syntax, coreference, or semantic heads at this scale. Whether these capabilities emerge at larger scale (1.3B+) remains an open question.
+
+Source: `eval/patch_unclassified_heads.py`. Results in `results/patching/patching-comparison.json`.
+
 ## Two Regimes of BPE Damage
 
 The atlas and stranded attention findings together reveal that BPE boundary corruption produces two distinct damage regimes, caused by the same mechanism but producing different symptoms depending on delimiter density in the training corpus.
