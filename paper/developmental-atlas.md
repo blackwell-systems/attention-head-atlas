@@ -656,6 +656,8 @@ Together, these findings suggest that patterning's mode decomposition holds at r
 
 **Xu (2026)** studied when attention circuits form, finding induction heads emerge at approximately 20 to 23 billion tokens and attention sinks emerge 10 to 20 times later. Our atlas operates at smaller scale (20,000 steps on 5 GB) but tracks all behavior types simultaneously and isolates the tokenizer as a variable. Xu's finding that sinks emerge much later than induction heads is consistent with our P0 cascade timeline: the P0 mechanism becomes available early (step 1,000 to 2,000), but individual heads collapse into it much later (median step 11,000), after induction heads have already stabilized (step 150).
 
+**Alqahtani et al. (2025)** argued that tokenization should be treated as a core modeling decision rather than a preprocessing step, proposing a principled framework for tokenizer design, evaluation, and adaptation (EACL 2026). Their position paper is primarily conceptual; the authors note that "we do not provide new empirical results or large-scale ablations." Our three-paper program provides the empirical evidence their thesis calls for: controlled tokenizer experiments showing that BPE merge decisions permanently shape attention head specialization, with causal ablation proof across two architectures that a 16-character tokenizer configuration change recovers 40-48% of attention capacity.
+
 **Aoyama et al. (2026)** derived a predictive equation for induction head emergence from batch size and context size. Their single-behavior phase transition analysis is complementary to our multi-behavior tracking. They identify two open directions: vocabulary size "will likely affect the emergence points," and "using an orthographic tokenization might lead to different results, which is an interesting venue for future research" (Section 8.2). Merge barriers are precisely an orthographic tokenization change: they alter pre-tokenization segmentation without changing the BPE algorithm. We show this change substantially alters developmental outcomes (spacing eliminated, delimiter heads increased, P0 reduced) while induction emergence timing remains consistent at step 150 across both seeds, consistent with their prediction that induction timing is robust to tokenizer changes.
 
 ## 8. Conclusion
@@ -673,6 +675,8 @@ The capacity tax affects downstream accuracy, not just perplexity. Completion be
 Merge barriers fix both damage regimes on both architectures. The barrier mechanism is universal across character sets (r=0.812 between two different barrier sets) and across attention mechanisms (essentially identical ablation costs on MHA and GQA). The developmental outcome is determined by the tokenizer, not the architecture: isolating any structural delimiters prevents both spacing proliferation and P0 collapse. Every model trained with standard BPE pays this capacity tax, and 16 lines of tokenizer configuration eliminate it.
 
 ## References
+
+Alqahtani, S., Nayeem, M.T., Laskar, M.T.R., Mohiuddin, T., & Bari, M.S. (2025). Stop taking tokenizers for granted: they are core design decisions in large language models. *EACL 2026*. arXiv:2601.13260.
 
 Aoyama, K., Wilcox, E.G., & Schneider, S. (2026). Predicting induction head emergence. *arXiv:2511.16893*.
 
