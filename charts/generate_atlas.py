@@ -290,8 +290,10 @@ def chart_layer_depth(use_excess=False):
         im = ax.imshow(layer_spec.T, aspect='auto', cmap='viridis',
                        extent=[steps[0], steps[-1], 23.5, -0.5],
                        interpolation='nearest')
-        setup_ax(ax, RUN_LABELS.get(run, run).split('(')[0].strip(),
-                xlabel='Training step', ylabel='Layer')
+        depth_label = RUN_LABELS.get(run, run)
+        if 'Structok' not in depth_label:
+            depth_label = depth_label.split('(')[0].strip()
+        setup_ax(ax, depth_label, xlabel='Training step', ylabel='Layer')
         plt.colorbar(im, ax=ax, label='Spec. index')
 
     fig.suptitle('Layer-Depth Specialization (%s scores)' % label,
@@ -328,7 +330,11 @@ def chart_polysemanticity(use_excess=False):
             specialists.append(spec_count)
             generalists.append(gen_count)
 
-        short_label = RUN_LABELS.get(run, run).split('(')[0].strip()
+        label_text = RUN_LABELS.get(run, run)
+        if 'Structok' in label_text:
+            short_label = label_text  # keep full label to distinguish the two structok runs
+        else:
+            short_label = label_text.split('(')[0].strip()
         setup_ax(ax, short_label, xlabel='Training step', ylabel='Number of heads')
         ax.plot(steps, specialists, color='#18befc', linewidth=2, label='Specialists (>0.7)')
         ax.plot(steps, generalists, color='#ff9944', linewidth=2, label='Generalists (<0.3)')
