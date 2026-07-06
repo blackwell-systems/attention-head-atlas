@@ -656,6 +656,10 @@ Together, these findings suggest that patterning's mode decomposition holds at r
 
 **Xu (2026)** studied when attention circuits form, finding induction heads emerge at approximately 20 to 23 billion tokens and attention sinks emerge 10 to 20 times later. Our atlas operates at smaller scale (20,000 steps on 5 GB) but tracks all behavior types simultaneously and isolates the tokenizer as a variable. Xu's finding that sinks emerge much later than induction heads is consistent with our P0 cascade timeline: the P0 mechanism becomes available early (step 1,000 to 2,000), but individual heads collapse into it much later (median step 11,000), after induction heads have already stabilized (step 150).
 
+**Schallon (2026)** identified systematic attention head collapse in BLOOM models (560M to 7.1B), where ALiBi positional encoding causes 31 to 44% of heads to collapse into BOS-sink patterns. The magnitude is strikingly close to our 40 to 48% spacing tax, though the root cause differs: ALiBi's steep position penalties versus BPE's boundary corruption. Both findings demonstrate that architectural and tokenizer design decisions can waste similar proportions of attention capacity, and both are addressable through targeted interventions (their surgical reinitialization, our merge barriers). The parallel suggests that attention head capacity loss from design decisions may be a general phenomenon across multiple axes, not specific to any single cause.
+
+**Yüksel et al. (2025)** showed that transformers learn sparse attention patterns incrementally, progressing from positional patterns (nearby tokens first) through a "competitive" phase (heads converging on dominant patterns) to a "cooperative" phase (heads specializing in distinct patterns). Their central question, why heads learn patterns in a specific order, is directly addressed by our data: BPE forces early acquisition of spacing boundary patterns, consuming head capacity before semantic or structural patterns can develop. Our merge barrier result shows this ordering is not inherent to transformer learning; it is an artifact of tokenization. Without BPE pressure, heads skip the spacing phase and proceed directly to productive specialization, consistent with their predicted natural progression from positional to semantic to cooperative.
+
 **Alqahtani et al. (2025)** argued that tokenization should be treated as a core modeling decision rather than a preprocessing step, proposing a principled framework for tokenizer design, evaluation, and adaptation (EACL 2026). Their position paper is primarily conceptual; the authors note that "we do not provide new empirical results or large-scale ablations." Our three-paper program provides the empirical evidence their thesis calls for: controlled tokenizer experiments showing that BPE merge decisions permanently shape attention head specialization, with causal ablation proof across two architectures that a 16-character tokenizer configuration change recovers 40-48% of attention capacity.
 
 **Aoyama et al. (2026)** derived a predictive equation for induction head emergence from batch size and context size. Their single-behavior phase transition analysis is complementary to our multi-behavior tracking. They identify two open directions: vocabulary size "will likely affect the emergence points," and "using an orthographic tokenization might lead to different results, which is an interesting venue for future research" (Section 8.2). Merge barriers are precisely an orthographic tokenization change: they alter pre-tokenization segmentation without changing the BPE algorithm. We show this change substantially alters developmental outcomes (spacing eliminated, delimiter heads increased, P0 reduced) while induction emergence timing remains consistent at step 150 across both seeds, consistent with their prediction that induction timing is robust to tokenizer changes.
@@ -702,6 +706,8 @@ Riviere, M., & Trott, S. (2025). Start making sense(s): tracking when attention 
 
 Sandoval-Segura, P., et al. (2025). Active-dormant attention heads: mechanistically demystifying extreme-token phenomena in LLMs. *arXiv:2410.13835*.
 
+Schallon, S. (2026). Surgical repair of collapsed attention heads in ALiBi transformers. *arXiv:2603.09616*.
+
 Voita, E., Talbot, D., Moiseev, F., Sennrich, R., & Titov, I. (2019). Analyzing multi-head self-attention: specialized heads do the heavy lifting, the rest can be pruned. *ACL*.
 
 Wang, L., Hu, J., Zhang, G., et al. (2025a). Differentiation and specialization of attention heads via the refined local learning coefficient. *ICLR 2025 Spotlight*. arXiv:2410.02984.
@@ -713,6 +719,8 @@ Wang, G., & Murfet, D. (2026). Patterning: the dual of interpretability. *arXiv:
 Xiao, G., Tian, Y., Chen, B., Han, S., & Lewis, M. (2024). Efficient streaming language models with attention sinks. *arXiv:2309.17453*.
 
 Xu, Z. (2026). When do attention circuits form? *arXiv:2606.02378*.
+
+Yüksel, O.K., et al. (2025). Incremental learning of sparse attention patterns in transformers. *arXiv:2602.19143*.
 
 ## Reproducibility
 
