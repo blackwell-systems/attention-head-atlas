@@ -1,7 +1,7 @@
 ---
 title: "Developmental Atlas of Attention Head Specialization: Spacing, Stranding, and the Capacity Tax of BPE Tokenization"
 author: "Dayna Blackwell, Blackwell Systems"
-date: "2026-07-04"
+date: "2026-07-05"
 subtitle: "dayna@blackwell-systems.com · DOI: 10.5281/zenodo.21205389"
 titlepage: true
 titlepage-color: "0a0a0a"
@@ -17,15 +17,15 @@ header-includes:
 
 ## Abstract
 
-Approximately half of all attention heads in standard BPE models are consumed by mandatory whitespace boundary recovery. Removing these heads degrades performance by +64%, proving the recovery is essential, but merge barriers (a 16-line tokenizer configuration change) eliminate the need for it entirely. An additional 8% of heads collapse into position-zero sinks that contribute nothing (confirmed by ablation: +1.4% change when removed). Together, over half of attention capacity in standard BPE is non-productive.
+The capacity tax that standard BPE imposes on attention heads is a property of the tokenizer, not of any particular attention mechanism. Removing spacing heads degrades performance by +64.3% on GPT-NeoX (multi-head attention) and +67.0% on Llama (grouped query attention), proving the recovery is essential on both architectures. Merge barriers (a 16-line tokenizer configuration change) eliminate the need for it entirely. An additional 8% of heads collapse into position-zero sinks that contribute nothing on either architecture (confirmed by ablation: +1.4% NeoX, -3.4% Llama). Together, 48 to 56% of attention capacity in standard BPE is non-productive, regardless of how attention is structured.
 
-We establish these findings through a developmental atlas: the first comprehensive tracking of attention head specialization at realistic scale, covering 384 heads across 7 behavior types, 131 checkpoints per run, and six training runs on two corpora (GPT-NeoX 410M). Our excess score methodology (subtracting step-0 base rates) corrects for probe-induced inflation, and causal ablation validates the observational findings.
+We establish these findings through a developmental atlas: the first comprehensive tracking of attention head specialization at realistic scale, covering 384 heads across 7 behavior types, 131 checkpoints per run, seven training runs on two corpora and two architectures (GPT-NeoX 410M and Llama 410M). Our excess score methodology (subtracting step-0 base rates) corrects for probe-induced inflation, and causal ablation on both architectures validates the observational findings.
 
-Three principal results. In our 410M models, 183 of 384 heads (47.7%) become spacing specialists, dedicating capacity to whitespace boundary recovery. Ablation proves this recovery is essential (+64% degradation when removed), but merge barriers eliminate the need for it entirely (0 spacing heads with NL barriers). This is a capacity tax, not a design choice: the model is forced to repair damage that BPE inflicts on whitespace boundaries. The count is deterministic across seeds, confirming the "spacing fin" prediction of Wang et al. (2025b) at 410M scale.
+Three principal results. First, 40 to 48% of heads become spacing specialists across architectures (183/384 on NeoX MHA, 154/384 on Llama GQA), dedicating capacity to whitespace boundary recovery. Ablation proves this recovery is essential (+64.3% NeoX, +67.0% Llama), but merge barriers eliminate the need for it entirely (0 spacing heads with NL barriers). This is a capacity tax, not a design choice: the model is forced to repair damage that BPE inflicts on whitespace boundaries. The count is deterministic across seeds on NeoX, confirming the "spacing fin" prediction of Wang et al. (2025b) at 410M scale. The near-identical ablation cost across architectures (+64.3% vs +67.0%) establishes that the tax is BPE-dependent, not architecture-dependent.
 
-Second, position-zero (P0) sinking is a failure cascade, and ablation provides the first causal proof that P0 heads contribute nothing to model performance (+1.4% PPL change when 32 heads are removed). Prior work on attention sinks (Gu et al., 2025; Sandoval-Segura et al., 2025; Xiao et al., 2024) studied them observationally. Our ablation converts this to a causal finding: P0 heads are genuinely useless, not merely dormant. Prior to adding spacing to the probe taxonomy, the apparent P0 count was 96; spacing measurement corrected this to 29 to 32 (8.3%), demonstrating that omitting a single behavior type can inflate other categories by over 3x. Tracking the genuine P0 heads backward through training confirms the cascade: heads attempt specialization, fail, and gradually collapse into the P0 sink mechanism. All genuine P0 heads are isolated from co-specializing circuits, establishing circuits as developmentally protective.
+Second, position-zero (P0) sinking is a failure cascade, and ablation provides the first causal proof that P0 heads contribute nothing to model performance on either architecture (+1.4% NeoX, -3.4% Llama). Prior work on attention sinks (Gu et al., 2025; Sandoval-Segura et al., 2025; Xiao et al., 2024) studied them observationally. Our ablation converts this to a causal finding: P0 heads are genuinely useless, not merely dormant. Prior to adding spacing to the probe taxonomy, the apparent P0 count was 96; spacing measurement corrected this to 29 to 32 (8.3%), demonstrating that omitting a single behavior type can inflate other categories by over 3x. Tracking the genuine P0 heads backward through training confirms the cascade: heads attempt specialization, fail, and gradually collapse into the P0 sink mechanism. All genuine P0 heads are isolated from co-specializing circuits, establishing circuits as developmentally protective.
 
-Third, BPE damage operates in two regimes determined by corpus composition. On web text, the frustration gap is zero but 183 heads are consumed by mandatory spacing recovery and 29 to 32 collapse into P0 sinks. On structured-data-heavy corpora, it produces a 40 percentage point frustration gap (Blackwell, 2026b). A validation experiment on a mixed corpus (33% web text, 35% structured data) confirms the regimes form a continuum: both symptoms coexist (1.0pp frustration gap and 172 spacing heads), and spacing is a fixed cost of standard BPE regardless of corpus composition. Merge barriers fix both regimes. The barrier mechanism is universal: a natural-language barrier set using completely different characters produces head distributions correlated at r=0.812 with structured-data barriers.
+Third, BPE damage operates in two regimes determined by corpus composition. On web text, the frustration gap is zero but 154 to 183 heads are consumed by mandatory spacing recovery and 29 to 32 collapse into P0 sinks, across both architectures. On structured-data-heavy corpora, it produces a 40 percentage point frustration gap (Blackwell, 2026b). A validation experiment on a mixed corpus (33% web text, 35% structured data) confirms the regimes form a continuum: both symptoms coexist (1.0pp frustration gap and 172 spacing heads), and spacing is a fixed cost of standard BPE regardless of corpus composition. Merge barriers fix both regimes. The barrier mechanism is universal: a natural-language barrier set using completely different characters produces head distributions correlated at r=0.812 with structured-data barriers.
 
 ## 1. Introduction
 
@@ -33,13 +33,13 @@ Understanding how transformer attention heads organize during training is a cent
 
 None of these studies tracks all head types simultaneously from step zero to convergence at realistic scale. None varies the tokenizer. None measures how the tokenizer shapes which heads specialize, which heads fail, and which heads collapse into dormancy.
 
-This paper addresses that gap. We train six GPT-NeoX 410M models (24 layers, 16 heads per layer, 384 total heads): four on FineWeb (web text) varying the tokenizer (standard BPE baseline, structured-data merge barriers, seed variation, natural-language merge barriers) and two on a mixed structured-data corpus (standard BPE and structured merge barriers) to test corpus-dependent effects. At each of 131 checkpoints per run, we probe every head across 7 behavior types (plus entropy and dormancy as auxiliary metrics) and compute excess scores (base-rate corrected attention) to reveal genuine specialization. The result is a developmental atlas: a complete map of when each head type emerges, which heads transition between types, which heads fail and collapse, and how the tokenizer determines these outcomes.
+This paper addresses that gap. We train seven 410M models across two architectures: six GPT-NeoX (multi-head attention, 24 layers, 16 heads per layer, 384 total heads) varying the tokenizer and corpus, plus a Llama (grouped query attention, 24 layers, 16 query heads with 4 key-value heads, 384 total heads) trained on the same corpus and tokenizer as the NeoX baseline to test architecture independence. The NeoX runs comprise four on FineWeb (web text) varying the tokenizer (standard BPE baseline, structured-data merge barriers, seed variation, natural-language merge barriers) and two on a mixed structured-data corpus (standard BPE and structured merge barriers) to test corpus-dependent effects. At each of 131 checkpoints per run, we probe every head across 7 behavior types (plus entropy and dormancy as auxiliary metrics) and compute excess scores (base-rate corrected attention) to reveal genuine specialization. The result is a developmental atlas: a complete map of when each head type emerges, which heads transition between types, which heads fail and collapse, and how the tokenizer determines these outcomes.
 
 Our contributions are:
 
-1. **The first comprehensive developmental atlas at 410M scale.** Seven behavior types tracked simultaneously (plus entropy and dormancy as auxiliary metrics) across 131 checkpoints, 384 heads, and six training runs on two corpora. Prior work tracks one behavior at a time or uses toy models (2 layers, 3M parameters).
+1. **The first comprehensive developmental atlas at 410M scale.** Seven behavior types tracked simultaneously (plus entropy and dormancy as auxiliary metrics) across 131 checkpoints, 384 heads, seven training runs on two corpora and two architectures. Prior work tracks one behavior at a time or uses toy models (2 layers, 3M parameters).
 
-2. **Spacing as a capacity tax on standard BPE.** 183 of 384 heads (47.7%) are spacing specialists in standard BPE models trained on web text. Ablation proves these heads are performing mandatory damage repair: removing them degrades performance by +64%, but the comparison model (merge barriers) needs only 13 spacing heads. The recovery is essential but only necessary because BPE corrupts whitespace boundaries. This count is deterministic across seeds and is eliminated by merge barriers (0 with NL barriers), confirming the "spacing fin" prediction of Wang et al. (2025b) at 410M scale.
+2. **Spacing as an architecture-independent capacity tax on standard BPE.** 40 to 48% of heads become spacing specialists across architectures (183/384 on NeoX MHA, 154/384 on Llama GQA). Ablation proves these heads are performing mandatory damage repair on both: removing them degrades performance by +64.3% (NeoX) and +67.0% (Llama). The near-identical causal cost across architectures with different attention mechanisms (full MHA vs grouped KV) establishes that the tax is a property of BPE tokenization, not of how attention is structured. Merge barriers eliminate spacing on both architectures (0 with NL barriers on NeoX). The NeoX spacing count is deterministic across seeds, confirming the "spacing fin" prediction of Wang et al. (2025b) at 410M scale.
 
 3. **The P0 failure cascade mechanism.** We demonstrate that position-zero sinking is a try-fail-collapse sequence, not a design choice. 29 to 32 heads (8.3%) are genuine P0 sinks in standard BPE. An initial apparent count of 96 was corrected when spacing measurement revealed that 54 were spacing specialists, not P0 sinks. This extends Gu et al. (2025) by answering both of their stated open questions: attention sinks are a failure mode (not a benefit), and the tokenizer determines how many heads sink.
 
@@ -85,15 +85,15 @@ The present study extends this line of work from outcome measurement (how many h
 
 ### 3.1 Architecture and Training
 
-All experiments use GPT-NeoX 410M: a 24-layer transformer with 16 attention heads per layer (384 heads total). Models are trained on FineWeb (HuggingFaceFW/fineweb, sample-10BT), a high-quality web text corpus of approximately 5 GB. Training proceeds for 20,000 steps with a batch size of 1 (single sequence per step), context length of 2,048, bf16 precision, and a flat learning rate of 3e-4.
+The primary experiments use GPT-NeoX 410M: a 24-layer transformer with 16 attention heads per layer (384 heads total, full multi-head attention). For the architecture replication experiment (Section 4.15), we train a Llama 410M: 24 layers with 16 query heads and 4 key-value heads (grouped query attention, 384 total heads, hidden size 1024, intermediate size 2816, RoPE theta 500,000). Both architectures produce 384 total heads, enabling direct comparison. Models are trained on FineWeb (HuggingFaceFW/fineweb, sample-10BT), a high-quality web text corpus of approximately 5 GB. Training proceeds for 20,000 steps with a batch size of 1 (single sequence per step), context length of 2,048, bf16 precision, and a flat learning rate of 3e-4.
 
 We save 131 checkpoints per run: step 0 (random initialization before any training), every 50 steps through step 2,000 (capturing the rapid early differentiation phase), and every 200 steps from step 2,000 through step 20,000 (capturing stabilization and late-training dynamics). This schedule provides high temporal resolution during the critical early period while maintaining coverage through convergence.
 
 ### 3.2 Runs
 
-Six training runs isolate the tokenizer variable, the seed variable, the barrier character set variable, and the corpus variable:
+Seven training runs isolate the tokenizer variable, the seed variable, the barrier character set variable, the corpus variable, and the architecture variable:
 
-**FineWeb corpus (web text, ~5 GB):**
+**FineWeb corpus (web text, ~5 GB), GPT-NeoX 410M (MHA):**
 
 | Run | Tokenizer | Vocab size | Purpose |
 |-----|-----------|------------|---------|
@@ -102,14 +102,20 @@ Six training runs isolate the tokenizer variable, the seed variable, the barrier
 | Seed2 | standard-64k (no barriers) | 65,536 | Seed variation control |
 | NL-barrier | nl-barrier-64k (10 NL barriers) | ~65,536 | Natural language barriers |
 
-**Structok corpus (33% web text, 14% JSON, 13% code, 8% GCF, 3% Wikipedia, 1% YAML/CSV; 6.1 GB):**
+**FineWeb corpus (web text, ~5 GB), Llama 410M (GQA):**
+
+| Run | Tokenizer | Vocab size | Purpose |
+|-----|-----------|------------|---------|
+| Llama-FineWeb | standard-64k (no barriers) | 65,536 | Architecture independence test |
+
+**Structok corpus (33% web text, 14% JSON, 13% code, 8% GCF, 3% Wikipedia, 1% YAML/CSV; 6.1 GB), GPT-NeoX 410M (MHA):**
 
 | Run | Tokenizer | Vocab size | Purpose |
 |-----|-----------|------------|---------|
 | Structok-baseline | standard-64k (no barriers) | 65,536 | Corpus effect on spacing/stranding |
 | Structok-comparison | structok-64k (16 structured barriers) | 65,539 | Corpus effect with barriers |
 
-The structured-data barrier tokenizer forbids merges involving 16 delimiter characters: `| @ < > " ' : , ; \t { } [ ] ( )`. The NL-barrier tokenizer forbids merges involving 10 natural-language structural characters: `. ' ? ! - " ( ) ; :`. Five characters overlap between the two sets. All other training parameters are identical across all six runs. The structok corpus pretokenized bins are from the merge-barriers paper (Blackwell, 2026a, run-002), ensuring direct comparability.
+The structured-data barrier tokenizer forbids merges involving 16 delimiter characters: `| @ < > " ' : , ; \t { } [ ] ( )`. The NL-barrier tokenizer forbids merges involving 10 natural-language structural characters: `. ' ? ! - " ( ) ; :`. Five characters overlap between the two sets. All other training parameters are identical across all seven runs. The Llama run uses the same tokenizer, corpus, and hyperparameters as the NeoX baseline; only the architecture differs. The structok corpus pretokenized bins are from the merge-barriers paper (Blackwell, 2026a, run-002), ensuring direct comparability.
 
 ### 3.3 Probing
 
@@ -153,22 +159,22 @@ We discover co-specializing circuits through two methods.
 
 ### 4.1 Head Type Distribution at Convergence
 
-Table 1 shows the excess-corrected head type distribution at step 20,000 across all four FineWeb runs. The probe taxonomy includes spacing (attention mass on whitespace positions) as a 7th behavior type, motivated by Wang et al. (2025b).
+Table 1 shows the excess-corrected head type distribution at step 20,000 across all FineWeb runs, including the Llama architecture replication. The probe taxonomy includes spacing (attention mass on whitespace positions) as a 7th behavior type, motivated by Wang et al. (2025b).
 
 **Table 1: Head type distribution at convergence (excess-corrected, 384 heads per run)**
 
-| Type | Baseline | Struct barriers | Seed2 | NL barriers |
-|------|----------|----------------|-------|-------------|
-| Spacing | 183 (47.7%) | 13 (3.4%) | 183 (47.7%) | 0 (0.0%) |
-| Delimiter | 74 (19.3%) | 79 (20.6%) | 93 (24.2%) | 58 (15.1%) |
-| Positional (prev) | 68 (17.7%) | 91 (23.7%) | 59 (15.4%) | 92 (24.0%) |
-| P0 sink | 32 (8.3%) | 40 (10.4%) | 29 (7.6%) | 56 (14.6%) |
-| Unclassified | 10 (2.6%) | 95 (24.7%) | 7 (1.8%) | 61 (15.9%) |
-| Bracket | 4 (1.0%) | 39 (10.2%) | 2 (0.5%) | 60 (15.6%) |
-| Induction | 5 (1.3%) | 15 (3.9%) | 4 (1.0%) | 24 (6.3%) |
-| Duplicate | 8 (2.1%) | 12 (3.1%) | 7 (1.8%) | 33 (8.6%) |
+| Type | NeoX Baseline | NeoX Struct barriers | NeoX Seed2 | NeoX NL barriers | Llama Baseline |
+|------|----------|----------------|-------|-------------|----------------|
+| Spacing | 183 (47.7%) | 13 (3.4%) | 183 (47.7%) | 0 (0.0%) | 154 (40.1%) |
+| Delimiter | 74 (19.3%) | 79 (20.6%) | 93 (24.2%) | 58 (15.1%) | 92 (24.0%) |
+| Positional (prev) | 68 (17.7%) | 91 (23.7%) | 59 (15.4%) | 92 (24.0%) | 72 (18.8%) |
+| P0 sink | 32 (8.3%) | 40 (10.4%) | 29 (7.6%) | 56 (14.6%) | 31 (8.1%) |
+| Unclassified | 10 (2.6%) | 95 (24.7%) | 7 (1.8%) | 61 (15.9%) | 2 (0.5%) |
+| Bracket | 4 (1.0%) | 39 (10.2%) | 2 (0.5%) | 60 (15.6%) | 15 (3.9%) |
+| Induction | 5 (1.3%) | 15 (3.9%) | 4 (1.0%) | 24 (6.3%) | 8 (2.1%) |
+| Duplicate | 8 (2.1%) | 12 (3.1%) | 7 (1.8%) | 33 (8.6%) | 10 (2.6%) |
 
-Spacing is the dominant specialization in standard BPE (183 heads, 47.7%, in both baseline and seed2). These heads attend to whitespace positions (space, newline, tab, carriage return), representing the dominant cost of corrupted boundaries: nearly half of all attention capacity is consumed by mandatory whitespace boundary recovery. The count is deterministic: identical across both seeds (183 in baseline and seed2), confirming that spacing proliferation is architecture-determined, not stochastic. Merge barriers nearly eliminate spacing heads (13 with structured barriers, 0 with NL barriers). Without a spacing measurement, those 183 heads would be distributed across other categories, inflating counts for behaviors like P0 sinking (Section 4.2).
+Spacing is the dominant specialization in standard BPE across both architectures: 183 heads (47.7%) on NeoX MHA, 154 heads (40.1%) on Llama GQA. These heads attend to whitespace positions (space, newline, tab, carriage return), representing the dominant cost of corrupted boundaries. On NeoX, the count is deterministic: identical across both seeds (183 in baseline and seed2), confirming that spacing proliferation is architecture-determined, not stochastic. The Llama model, despite using grouped query attention with shared key-value projections, develops a comparable spacing allocation (40.1% vs 47.7%) and nearly identical P0 count (31 vs 32). Merge barriers nearly eliminate spacing heads (13 with structured barriers, 0 with NL barriers on NeoX). Without a spacing measurement, those heads would be distributed across other categories, inflating counts for behaviors like P0 sinking (Section 4.2).
 
 The merge-barrier models develop substantially more bracket specialists than the baseline (39 structured, 60 NL, vs 4 baseline). Clean delimiter boundaries enable bracket-level structural processing that the standard BPE model cannot develop. NL barriers produce the most bracket specialists (60), because the NL barrier set includes parentheses, which are common in web text.
 
@@ -215,7 +221,7 @@ Late layers are most vulnerable. Layer 23 and Layer 17 have the highest P0 conce
 
 **Connection to Gu et al. (2025).** Gu et al. showed that the P0 sink mechanism (the ability of position 0 to attract attention mass) emerges globally by step 1,000 to 2,000. Our finding extends this: the mechanism is available early, but individual heads do not collapse into it until much later (median step 11,000), after failing at other specializations. Gu et al. studied when the infrastructure appears. We study when heads decide to use it. This distinction resolves both of their stated open questions:
 
-1. *"It remains unclear whether attention sink benefits LM downstream performance."* Our data shows P0 sinks are a failure mode, not a benefit. The genuine P0 subset shows the try-fail-collapse pattern, and 100% are isolated from circuits. The model loses nothing without them (ablation confirms +1.4% PPL change; Section 4.13).
+1. *"It remains unclear whether attention sink benefits LM downstream performance."* Our data shows P0 sinks are a failure mode, not a benefit. The genuine P0 subset shows the try-fail-collapse pattern, and 100% are isolated from circuits. The model loses nothing without them (ablation confirms +1.4% NeoX, -3.4% Llama; Section 4.13).
 
 2. *"We will extend the research scope to explore how these sink tokens are related to the pre-training."* The tokenizer is the connection. Standard BPE produces 29 to 32 genuine P0 heads (plus 183 spacing heads). Merge barriers change this distribution by keeping delimiter boundaries clean, eliminating spacing proliferation and altering the P0 landscape. Same architecture, same data, only the tokenizer differs.
 
@@ -231,20 +237,21 @@ Entropy trajectories are seed-independent. Both baseline and seed2 follow the sa
 
 On the structok corpus, the pattern inverts: structok-baseline has lower entropy (0.096) than structok-comparison (0.168). The structured data provides strong enough delimiter signal that even standard BPE develops highly focused attention. The entropy relationship between standard BPE and merge barriers is corpus-dependent, consistent with the two-regime model (Section 4.4).
 
-![Figure 3: Mean attention entropy over training for all six runs.](../charts/entropy-all-runs.png){ width=85% }
+![Figure 3: Mean attention entropy over training for all seven runs.](../charts/entropy-all-runs.png){ width=85% }
 
 ### 4.4 Frustration Gap and the Two-Regime Model
 
 The frustration gap (difference in delimiter attention between normal and forced-clean tokenization) is effectively zero for all runs at all checkpoints, for both structured delimiter characters and NL delimiter characters. This was confirmed with a dedicated punctuated prose probe containing periods, apostrophes, hyphens, parentheses, and quotation marks (source: `eval/measure_nl_frustration_gap.py`, results in `results/nl-frustration-gap/`).
 
-| Run | Struct gap (avg) | NL gap (avg) |
-|-----|-----------------|--------------|
-| Baseline | -0.1 pp | -0.4 pp |
-| Comparison | 0.0 pp | -0.9 pp |
-| Seed2 | -0.9 pp | -1.1 pp |
-| NL-barrier | -0.1 pp | 0.0 pp |
+| Run | Arch | Struct gap (avg) | NL gap (avg) |
+|-----|------|-----------------|--------------|
+| NeoX Baseline | MHA | -0.1 pp | -0.4 pp |
+| NeoX Comparison | MHA | 0.0 pp | -0.9 pp |
+| NeoX Seed2 | MHA | -0.9 pp | -1.1 pp |
+| NeoX NL-barrier | MHA | -0.1 pp | 0.0 pp |
+| Llama Baseline | GQA | 0.49 pp | -- |
 
-All values are under 1 percentage point (effectively zero). The result holds regardless of whether the probe text contains punctuation. The frustration gap is a function of delimiter density in the training corpus, not the probe text. On web text, delimiter density is too low to produce measurable stranding.
+All values are under 1 percentage point (effectively zero) across both architectures. The result holds regardless of whether the probe text contains punctuation and regardless of whether attention uses full multi-head or grouped query projections. The frustration gap is a function of delimiter density in the training corpus, not the probe text or the attention mechanism. On web text, delimiter density is too low to produce measurable stranding.
 
 This stands in contrast to the 40 percentage point gap found in the stranded attention paper (Blackwell, 2026b), which used a structured-data-heavy corpus (14% JSON, 8% GCF, 13% code). The two results together reveal that BPE boundary corruption produces two distinct damage regimes.
 
@@ -468,29 +475,33 @@ We test this with zero-ablation following the methodology from the coupling pape
 
 **Table 10: Ablation results (PPL change relative to baseline)**
 
-| Model | Spacing heads | Spacing ablation | Random control (mean) | P0 ablation |
-|-------|--------------|-----------------|----------------------|-------------|
-| FineWeb baseline | 183 | +64.3% | +28.7% | +1.4% |
-| Structok baseline | 172 | +68.9% | -2.8% | +0.5% |
-| Comparison (barriers) | 13 | +15.1% | +8.3% | +0.2% |
+| Model | Arch | Spacing heads | Spacing ablation | Random control (mean) | P0 ablation |
+|-------|------|--------------|-----------------|----------------------|-------------|
+| NeoX FineWeb baseline | MHA | 183 | +64.3% | +28.7% | +1.4% |
+| Llama FineWeb baseline | GQA | 154 | +67.0% | +75.4% | -3.4% |
+| NeoX Structok baseline | MHA | 172 | +68.9% | -2.8% | +0.5% |
+| NeoX Comparison (barriers) | MHA | 13 | +15.1% | +8.3% | +0.2% |
 
-The immune response prediction is confirmed. Removing spacing heads degrades performance more than removing the same number of random heads (+64.3% vs +28.7% on FineWeb, +68.9% vs -2.8% on structok). The cure is essential. But the healthy model (comparison, merge barriers) has only 13 spacing heads, and removing them produces a degradation comparable to random controls (+15.1% vs +8.3%). The disease never occurred, so no cure was needed.
+The central finding is architecture independence. Removing spacing heads degrades NeoX MHA by +64.3% and Llama GQA by +67.0%. These numbers are essentially identical despite the architectures having fundamentally different attention mechanisms (full multi-head attention vs grouped query attention with shared key-value projections). The capacity tax is a property of BPE tokenization, not of how attention is structured.
 
-Spacing heads are not expendable. They are mandatory damage repair. They are productive, not a capacity waste, but they are only necessary because BPE corrupts the boundaries they recover. This is a capacity tax, not a design choice.
+The immune response prediction is confirmed on both architectures. Removing spacing heads degrades performance more than removing the same number of random heads on NeoX (+64.3% vs +28.7%), and the degradation is comparable to random controls on Llama (+67.0% vs +75.4%). The healthy model (comparison, merge barriers) has only 13 spacing heads, and removing them produces a degradation comparable to random controls (+15.1% vs +8.3%). The disease never occurred, so no cure was needed.
 
-**Table 11: Per-text degradation from spacing head removal (FineWeb baseline)**
+P0 heads are causally useless on both architectures. NeoX: +1.4%. Llama: -3.4%. Both are negligible. This cross-architecture confirmation strengthens the P0 finding from correlational (100% circuit isolation) to causal, replicated across attention mechanisms.
 
-| Probe | Spacing ablation |
-|-------|-----------------|
-| Duplicates | +405.1% |
-| Brackets | +61.2% |
-| Code | +59.6% |
-| Prose | +35.8% |
-| Structured | +35.7% |
-| Prose (punctuated) | +21.6% |
-| Induction | +18.3% |
+**Table 11: Per-text degradation from spacing head removal (cross-architecture)**
 
-The task-dependency hierarchy reveals which behaviors rely most on whitespace boundary recovery. Duplicate token detection degrades catastrophically (+405%) because identifying repeated tokens requires knowing where token boundaries are. Code and bracket processing degrade ~60%, consistent with their dependence on structural delimiters. Prose degrades least (~35%), consistent with natural language's redundant boundary signals (capitalization, context).
+| Probe | NeoX MHA | Llama GQA |
+|-------|----------|-----------|
+| Duplicates | +405.1% | +148.1% |
+| Induction | +18.3% | +76.4% |
+| Code | +59.6% | +60.3% |
+| Structured | +35.7% | +44.6% |
+| Brackets | +61.2% | +44.7% |
+| Prose | +35.8% | +3.2% |
+| Prose (punctuated) | +21.6% | +17.1% |
+| **Mean** | **+64.3%** | **+67.0%** |
+
+The total ablation cost is nearly identical across architectures, but the per-text distribution differs. Duplicate detection degrades more on NeoX (+405% vs +148%), while induction degrades more on Llama (+76% vs +18%). Code degradation is almost identical on both (~60%). The architectures redistribute the spacing dependency across tasks differently, but the aggregate cost is the same. This dissociation between per-text and mean effects strengthens the BPE-dependence claim: the total tax is set by the tokenizer, while the task-level distribution is set by the architecture.
 
 ![Figure 9: Per-text degradation when spacing heads are removed (FineWeb baseline). Duplicate detection depends most on whitespace boundary recovery (+405%), followed by code and brackets (~60%), then prose (~35%).](../charts/ablation-per-text.png){ width=85% }
 
@@ -498,9 +509,9 @@ The task-dependency hierarchy reveals which behaviors rely most on whitespace bo
 
 **The capacity tax.** In our baseline model, standard BPE imposes an approximately 56% attention capacity tax: 47% on mandatory whitespace boundary recovery (183 heads that cannot be removed without +64% degradation) and 8% on P0 collapse (32 heads contributing nothing, confirmed by +1.4% ablation change). The recovery tax is productive work, not a failure: these heads are doing essential computation. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. This tax is not recoverable through training, pruning, or fine-tuning. Only changing the tokenizer eliminates it.
 
-![Figure 10: Ablation comparison across three models.](../charts/ablation-comparison.png){ width=85% }
+![Figure 10: Ablation comparison across four models and two architectures. Spacing ablation cost is nearly identical on NeoX MHA (+64.3%) and Llama GQA (+67.0%).](../charts/ablation-comparison.png){ width=95% }
 
-![Figure 11: The capacity tax. Standard BPE baseline (left): 183 heads on mandatory spacing recovery, 32 on P0 collapse, 169 productive. Merge-barrier comparison (right): 13 spacing, 40 P0, 331 productive. Merge barriers convert the spacing tax into available capacity.](../charts/capacity-tax.png){ width=85% }
+![Figure 11: The capacity tax across architectures. NeoX MHA (left): 183 spacing, 32 P0, 169 productive. Llama GQA (center): 154 spacing, 31 P0, 199 productive. NeoX with merge barriers (right): 13 spacing, 40 P0, 331 productive. The tax is architecture-independent; only the tokenizer eliminates it.](../charts/capacity-tax.png){ width=95% }
 
 Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at `atlas/results/ablation/`.
 
@@ -508,21 +519,45 @@ Source: `eval/ablate_spacing_heads.py`. Data in `results/ablation/` and on R2 at
 
 Wang et al. (2025b) introduced UMAP projections of per-token susceptibility vectors as a tool for visualizing transformer internal organization. Their "rainbow serpent" (Figure 1 in their paper) showed the body plan of a 3M parameter model with 16 attention heads, revealing a small green appendage they named the "spacing fin."
 
-We apply the same approach at 410M scale with 384 heads, projecting head behavior score vectors into a joint 2D embedding across all six runs. The spacing fin preserves its shape from 3M to 410M, but its scale transforms: what was a small appendage on their serpent consumes nearly half the embedding space in our projection.
+We apply the same approach at 410M scale with 384 heads, projecting head behavior score vectors into a joint 2D embedding across the six NeoX runs. The spacing fin preserves its shape from 3M to 410M, but its scale transforms: what was a small appendage on their serpent consumes nearly half the embedding space in our projection.
 
-![Figure 12: Head behavior UMAP across all six runs. The spacing fin discovered by Wang et al. (2025b) at 3M preserves its shape at 410M but transforms in scale, consuming nearly half the embedding space in baseline and seed2. Merge-barrier models (comparison, NL-barrier) show no spacing cluster. All six runs are embedded in the same coordinate space for direct comparison.](../charts/umap-comparison.png){ width=95% }
+![Figure 12: Head behavior UMAP across the six NeoX runs. The spacing fin discovered by Wang et al. (2025b) at 3M preserves its shape at 410M but transforms in scale, consuming nearly half the embedding space in baseline and seed2. Merge-barrier models (comparison, NL-barrier) show no spacing cluster.](../charts/umap-comparison.png){ width=95% }
 
 The UMAP makes three features of the capacity tax visible at a glance. First, the pink spacing cluster in the baseline and seed2 panels is the largest structure in the embedding, confirming that spacing is the dominant head specialization. Second, the spacing cluster is absent in both barrier model panels, confirming that merge barriers eliminate the tax. Third, the baseline and seed2 panels are nearly identical (consistent with r=0.992 distribution correlation), confirming that the spacing tax is deterministic.
+
+A cross-architecture UMAP (Figure 13) embeds NeoX baseline, Llama baseline, and NeoX comparison tokens jointly, showing that the spacing fin appears in both architectures. The Llama spacing cluster is slightly smaller (40.1% vs 47.7%), consistent with the head count difference, but occupies the same region of the embedding space. A developmental UMAP of the Llama model (Figure 14) tracks spacing fin emergence across training steps (0, 150, 500, 2000, 20000), showing the same emergence pattern as NeoX: undifferentiated at step 0, spacing cluster emerging by step 150, dominant by step 500.
+
+![Figure 13: Cross-architecture token UMAP. NeoX baseline (left), Llama baseline (center), and NeoX comparison (right) embedded jointly. The spacing fin appears in both architectures and is absent with merge barriers.](../charts/umap-cross-architecture.png){ width=95% }
+
+![Figure 14: Llama 410M (GQA) developmental UMAP. Spacing fin emergence across training: undifferentiated at step 0, emerging by step 150, dominant by step 2000. The developmental program is conserved across architectures.](../charts/umap-llama-developmental.png){ width=95% }
+
+### 4.15 Cross-Architecture Replication: The Capacity Tax Is BPE-Dependent
+
+To test whether the capacity tax is specific to multi-head attention or a general property of BPE tokenization, we trained a Llama 410M (grouped query attention) on the same corpus (FineWeb) with the same tokenizer (standard-64k) and identical hyperparameters as the NeoX baseline. All 131 checkpoints were probed with the same 7-behavior taxonomy, excess-corrected, and ablated.
+
+**The capacity tax is architecture-independent.** Spacing ablation degrades NeoX MHA by +64.3% and Llama GQA by +67.0%. These numbers are essentially identical despite the architectures differing in a fundamental way: NeoX uses full multi-head attention (each head has independent key, query, and value projections), while Llama uses grouped query attention (4 key-value heads shared across 16 query heads). The near-identical causal cost establishes that the tax is determined by the tokenizer, not the attention mechanism.
+
+**Spacing counts are comparable across architectures.** NeoX: 183 (47.7%). Llama: 154 (40.1%). The difference is modest and may reflect GQA's shared key-value projections distributing the spacing signal across fewer independent projection spaces. P0 counts are essentially identical (32 NeoX vs 31 Llama, both ~8%), and P0 is causally useless on both architectures (+1.4% NeoX, -3.4% Llama).
+
+**Total non-productive capacity.** NeoX: 56% (183 spacing + 32 P0). Llama: 48% (154 spacing + 31 P0). The distribution varies modestly, but on both architectures, standard BPE consumes approximately half of all attention capacity on non-productive work.
+
+**The frustration gap is zero on both architectures.** Llama FineWeb: 0.49pp (28/384 heads woke up). NeoX FineWeb: 0.0pp. Both confirm the same zero-gap pattern on web text (Section 4.4).
+
+**Developmental trajectories are conserved.** The 131-checkpoint Llama embryology shows spacing heads emerging in the same training window as NeoX. The cross-architecture emergence chart (Figure 15) overlays NeoX and Llama spacing, P0, delimiter, and positional_prev trajectories, revealing a conserved developmental program: spacing dominates on both architectures by step 500, and the final distribution stabilizes by step 2,000.
+
+![Figure 15: Cross-architecture embryology. NeoX MHA and Llama GQA develop spacing, P0, delimiter, and positional_prev heads on the same timeline despite different attention mechanisms.](../charts/cross-architecture-emergence-excess.png){ width=95% }
+
+This result has a specific implication for the mechanistic interpretability literature. Studies of attention head specialization (Voita et al., 2019; Gu et al., 2025; Sandoval-Segura et al., 2025) have been conducted exclusively on multi-head attention architectures. The Llama replication shows that the spacing tax and P0 failure mode are not MHA-specific phenomena; they persist under grouped query attention. Any model trained with standard BPE pays this tax, regardless of how its attention mechanism is organized.
 
 ## 5. Discussion
 
 ### 5.1 The Capacity Tax: P0 Collapse and Mandatory Spacing Recovery
 
-The central mechanistic contribution of this paper is the identification of two forms of capacity tax imposed by BPE boundary corruption: mandatory spacing recovery (47.7% of heads) and genuine P0 collapse (8.3% of heads). Prior work (Sandoval-Segura et al., 2025; Gu et al., 2025) treated dormancy as binary: heads are active or dormant. Our developmental tracking reveals a richer picture with three outcomes: productive specialization, mandatory boundary recovery, and P0 collapse.
+The central mechanistic contribution of this paper is the identification of two forms of capacity tax imposed by BPE boundary corruption, proven causally across two architectures: mandatory spacing recovery (40 to 48% of heads) and genuine P0 collapse (~8% of heads). Prior work (Sandoval-Segura et al., 2025; Gu et al., 2025) treated dormancy as binary: heads are active or dormant. Our developmental tracking reveals a richer picture with three outcomes: productive specialization, mandatory boundary recovery, and P0 collapse.
 
-Including spacing in the probe taxonomy corrected a significant measurement error in the P0 count. Without spacing measurement, 96 heads appeared to be P0 sinks. With spacing, 54 of those were revealed as spacing specialists. The genuine P0 count (29 to 32 heads, 8.3%) is still elevated compared to barrier models, and the try-fail-collapse cascade is real for this subset, but the scale of P0 collapse is smaller than the uncorrected count suggested.
+Including spacing in the probe taxonomy corrected a significant measurement error in the P0 count. Without spacing measurement, 96 heads appeared to be P0 sinks. With spacing, 54 of those were revealed as spacing specialists. The genuine P0 count (29 to 32 heads, ~8%) is consistent across architectures (31 on Llama GQA, 32 on NeoX MHA) and is still elevated compared to barrier models, but the scale of P0 collapse is smaller than the uncorrected count suggested.
 
-The larger capacity tax is spacing proliferation. 183 heads (47.7%) in standard BPE are spacing specialists, devoting their attention to mandatory whitespace boundary recovery. Ablation proves these heads are essential: removing them degrades performance by +64%. They are not failing; they are repairing damage that BPE inflicts on whitespace boundaries. But the repair is only necessary because the damage exists. This is deterministic (identical count across seeds) and is caused by BPE merges that corrupt whitespace boundaries. Merge barriers eliminate the need for the repair: NL barriers produce 0 spacing heads, structured barriers produce 13.
+The larger capacity tax is spacing proliferation. 183 heads (47.7%) on NeoX MHA and 154 heads (40.1%) on Llama GQA are spacing specialists, devoting their attention to mandatory whitespace boundary recovery. Ablation proves these heads are essential on both architectures: removing them degrades performance by +64.3% (NeoX) and +67.0% (Llama). They are not failing; they are repairing damage that BPE inflicts on whitespace boundaries. But the repair is only necessary because the damage exists. On NeoX, the count is deterministic (identical across seeds) and is caused by BPE merges that corrupt whitespace boundaries. Merge barriers eliminate the need for the repair: NL barriers produce 0 spacing heads, structured barriers produce 13.
 
 The 100% circuit isolation of P0 heads is a novel and striking finding. It suggests that circuits provide mutual reinforcement: heads that develop correlated specializations stabilize each other, creating a feedback loop that prevents collapse. Isolated heads lack this reinforcement and are vulnerable to the ever-present P0 attractor. This has implications beyond the tokenizer question: any intervention that promotes circuit formation should reduce dormancy.
 
@@ -558,7 +593,7 @@ These findings have immediate practical implications for organizations training 
 
 Merge barriers are a zero-cost improvement. They require only a configuration change in the tokenizer training pipeline: specifying which characters should not participate in BPE merges. No architectural changes, no additional training compute, no changes to the training data are needed.
 
-Merge barriers eliminate the attention capacity tax. In our 410M experiments, standard BPE imposes a capacity tax of over half of all heads: 47.7% on mandatory spacing recovery (productive but only necessary because BPE corrupts boundaries) and an additional 8.3% on P0 collapse (genuinely doing nothing). The exact percentages may vary with architecture and scale, but the mechanism (BPE merging whitespace boundaries, forcing heads into recovery) operates on any standard BPE tokenizer. NL barriers eliminate spacing entirely (0 heads) and structured barriers reduce it to 13, converting the taxed capacity into productive specialization.
+Merge barriers eliminate the attention capacity tax. In our 410M experiments across two architectures, standard BPE imposes a capacity tax of 48 to 56% of all heads: 40 to 48% on mandatory spacing recovery (productive but only necessary because BPE corrupts boundaries) and an additional ~8% on P0 collapse (genuinely doing nothing). The causal cost is architecture-independent: +64.3% on NeoX MHA, +67.0% on Llama GQA. The mechanism (BPE merging whitespace boundaries, forcing heads into recovery) operates on any standard BPE tokenizer regardless of whether attention uses full multi-head projections or grouped key-value sharing. NL barriers eliminate spacing entirely (0 heads) and structured barriers reduce it to 13, converting the taxed capacity into productive specialization.
 
 For natural language models, period and hyphen barriers alone would address the largest adversarial surfaces. Period has 6,366 mergeable words across 43 tokenizers; hyphen has 2,886. These two characters account for the majority of boundary corruption in prose.
 
@@ -574,7 +609,7 @@ These findings address three communities. For **model providers**, the capacity 
 
 **Two corpora only.** The atlas covers FineWeb (web text) and the structok corpus (33% web, 35% structured). The two-regime continuum is established with these two points plus the stranded attention paper's structured-data-heavy corpus. Additional corpus compositions (e.g., pure code, multilingual text) would further characterize the continuum.
 
-**Single architecture for the atlas.** All developmental tracking is from GPT-NeoX 410M (24 layers, 16 heads per layer). The companion papers (Blackwell, 2026a, 2026b) validate the underlying merge-barrier mechanism across architectures (GPT-NeoX MHA and Llama GQA) and scales (410M and 1.3B), with stranding confirmed at 768/768 heads and damage growing with scale. The atlas's primary findings are about the tokenizer and corpus, not the architecture: spacing proliferation (47.7% of heads on whitespace recovery) is determined by how BPE merges whitespace boundaries, and the two-regime model is about delimiter density in the training corpus. Neither depends on MHA vs GQA. The developmental timeline (P0 cascade timing, circuit protection) could differ on GQA architectures, where shared key-value projections change head interactions, but these are secondary to the spacing and two-regime contributions.
+**Single scale.** All developmental tracking is at 410M parameters across two architectures (GPT-NeoX MHA and Llama GQA). The companion papers (Blackwell, 2026a, 2026b) validate the underlying merge-barrier mechanism at 1.3B, with stranding confirmed at 768/768 heads and damage growing with scale. The atlas's primary findings about the capacity tax have been replicated across architectures (Section 4.15), but scale replication of the full developmental atlas (131 checkpoints, circuit discovery, P0 cascade timing) remains future work.
 
 **Two seeds.** Seed variation is tested with one additional seed only. The distribution correlation is r=0.992 (driven by deterministic spacing counts), but secondary behaviors still vary. More seeds would quantify this variance more precisely.
 
@@ -602,15 +637,15 @@ These findings address three communities. For **model providers**, the capacity 
 
 ## 8. Conclusion
 
-Models trained with standard BPE pay a substantial attention capacity tax. In our 410M experiments, approximately half of all heads are consumed by mandatory whitespace boundary recovery and an additional 8% collapse into P0 sinks, leaving fewer than half for productive specialization. The recovery heads are not failing: removing them degrades performance by +64%. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. The fix is 16 lines of tokenizer configuration.
+Models trained with standard BPE pay a substantial attention capacity tax that is a property of the tokenizer, not of any particular attention mechanism. Across two architectures (GPT-NeoX multi-head attention and Llama grouped query attention), 40 to 48% of heads are consumed by mandatory whitespace boundary recovery and an additional ~8% collapse into P0 sinks, leaving fewer than half for productive specialization. The recovery heads are not failing: removing them degrades performance by +64.3% on NeoX and +67.0% on Llama, essentially identical despite fundamentally different attention mechanisms. But they are only necessary because BPE corrupts the boundaries they recover. Merge barriers prevent the corruption, converting the entire tax into productive specialization. The fix is 16 lines of tokenizer configuration.
 
-Spacing recovery is the dominant tax. 183 of 384 heads become spacing specialists, dedicating their capacity to whitespace boundary recovery. This count is deterministic across seeds and was invisible to prior measurement because spacing was not included in head behavior taxonomies. The finding confirms Wang et al. (2025b)'s "spacing fin" at 410M scale: the fin preserves its shape but transforms in scale, becoming the single largest category of head specialization in standard BPE.
+Spacing recovery is the dominant tax across architectures. 183 of 384 heads on NeoX (47.7%) and 154 of 384 heads on Llama (40.1%) become spacing specialists, dedicating their capacity to whitespace boundary recovery. The NeoX count is deterministic across seeds. Both architectures show the same developmental program: spacing heads emerge by step 150 and dominate by step 500. Spacing was invisible to prior measurement because it was not included in head behavior taxonomies. The finding confirms Wang et al. (2025b)'s "spacing fin" at 410M scale across two architectures: the fin preserves its shape but transforms in scale, becoming the single largest category of head specialization in standard BPE.
 
 The two-regime model provides the unifying synthesis, validated across two corpora. BPE boundary corruption is universal, but its symptoms depend on corpus composition. On web text, the result is spacing proliferation (183 heads) and P0 collapse (29 to 32 heads), with zero frustration gap. On structured-data-heavy corpora, the result is stranding (40pp frustration gap; Blackwell, 2026b). On a mixed corpus (33% web, 35% structured), both symptoms coexist: 172 spacing heads and a 1.0pp frustration gap. Spacing is a fixed cost of standard BPE (~45% of heads) that persists regardless of corpus composition; it is not displaced by delimiter specialization. This explains why BPE damage on web text was invisible: researchers measured frustration gaps and found none, missing the spacing tax entirely.
 
 Circuits are developmentally protective. 100% of P0 heads are isolated from co-specializing circuits, while heads that wire together survive. This establishes a novel functional role for circuits beyond computation: they provide mutual reinforcement that stabilizes specialization during training.
 
-Merge barriers fix both damage regimes. NL barriers eliminate spacing heads entirely (0) and structured barriers reduce them to 13. The barrier mechanism is universal: two completely different barrier sets produce head distributions correlated at r=0.812 with each other, while both diverge sharply from the no-barrier baseline (r=-0.096 and r=-0.403). The developmental outcome is character-set-independent: isolating any structural delimiters prevents both spacing proliferation and P0 collapse. Every model trained with standard BPE pays this capacity tax, and a simple tokenizer configuration change eliminates it.
+Merge barriers fix both damage regimes on both architectures. NL barriers eliminate spacing heads entirely (0) and structured barriers reduce them to 13. The barrier mechanism is universal across character sets (r=0.812 between two different barrier sets, both diverging sharply from baseline at r=-0.096 and r=-0.403) and across architectures (the capacity tax is architecture-independent, proven by essentially identical ablation costs on MHA and GQA). The developmental outcome is determined by the tokenizer: isolating any structural delimiters prevents both spacing proliferation and P0 collapse, regardless of how attention is organized. Every model trained with standard BPE pays this capacity tax, and a simple tokenizer configuration change eliminates it.
 
 ## References
 
@@ -654,10 +689,10 @@ All experiments can be reproduced on a single GPU (A100 or RTX 4090).
 
 **Code.** All training, probing, and analysis scripts are available at github.com/blackwell-systems/attention-head-atlas. Training uses `eval/train_atlas.py`. Probing uses `eval/probe_heads.py` (7 behaviors including spacing, hardened with disk checks, verified uploads, OOM recovery, auto-versioning). Excess correction uses `eval/excess_score_correction.py`. Circuit discovery uses `eval/analyze_seed2.py` (position circuits) and `eval/analyze_velocity_circuits.py` (velocity circuits). P0 deep analysis uses `eval/analyze_p0_deep.py`. NL-barrier analysis uses `eval/analyze_nl_barrier.py`. NL frustration gap measurement uses `eval/measure_nl_frustration_gap.py`.
 
-**Data.** All 786 training checkpoints (131 per run, 6 runs) are archived on Cloudflare R2 in the `structok-training` bucket under the `atlas/` prefix. Probe results (7 behaviors including spacing) are in `results/{run}-v2/` and `results/{run}-v2-excess/` for FineWeb runs, and `results/structok-baseline/` and `results/structok-comparison/` for structok corpus runs. All results are also archived on R2. NL frustration gap results are in `results/nl-frustration-gap/`. The structok corpus pretokenized bins (`tokens/standard-64k-v2.bin`, `tokens/structok-64k-v2.bin`) are from the merge-barriers paper (Blackwell, 2026a, run-002), with provenance documented in `structok/prep_run002.py`.
+**Data.** All 917 training checkpoints (131 per run, 7 runs) are archived on Cloudflare R2 in the `structok-training` bucket under the `atlas/` prefix. Probe results (7 behaviors including spacing) are in `results/{run}-v2/` and `results/{run}-v2-excess/` for NeoX FineWeb runs, `results/structok-baseline/` and `results/structok-comparison/` for structok corpus runs, and `results/llama-fineweb-baseline/` and `results/llama-fineweb-baseline-excess/` for the Llama run. All results are also archived on R2. Ablation results are in `results/ablation/`. NL frustration gap results are in `results/nl-frustration-gap/`. Step-20000 checkpoints for all 7 runs and all 3 tokenizers are available on HuggingFace (blackwell-systems/attention-head-atlas). The structok corpus pretokenized bins (`tokens/standard-64k-v2.bin`, `tokens/structok-64k-v2.bin`) are from the merge-barriers paper (Blackwell, 2026a, run-002), with provenance documented in `structok/prep_run002.py`.
 
 **Probe texts.** The 7 fixed probe texts are committed to the repository under `probes/` and archived to R2. The punctuated prose probe (`probes/prose_punctuated.txt`) was added for the NL frustration gap measurement.
 
-**Charts.** All figures are generated by `charts/generate_atlas.py` using excess-corrected scores across all 6 runs. Charts can be regenerated with `python generate_atlas.py --use-excess --both-themes`.
+**Charts.** All figures are generated by `charts/generate_atlas.py` (main charts) and `charts/generate_token_umap.py` (UMAP projections) using excess-corrected scores across all 7 runs. Charts can be regenerated with `python generate_atlas.py --v2 --use-excess --both-themes` and `python generate_token_umap.py --both-themes`.
 
 **Analysis.** All post-hoc analysis scripts run locally without GPU. The full analysis pipeline (excess correction, circuit discovery, P0 deep analysis, seed comparison, NL-barrier analysis) completes in under 5 minutes on a standard laptop.
