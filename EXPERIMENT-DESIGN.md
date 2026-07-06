@@ -109,20 +109,24 @@ atlas/
 - Structok corpus (2 runs): ~$7.00 (completed, training + probing across 4 instances)
 - Ablation study (3 models): ~$0.30 (completed, inference only)
 - UMAP extraction (2 models): ~$0.10 (completed, inference only)
-- Llama developmental atlas (training + probing + ablation): ~$3.40 (in progress)
+- Llama developmental atlas (training + probing + ablation): ~$3.40 (completed)
+- Downstream completion benchmark: ~$0.20 (completed, inference only)
 
-## Status (2026-07-04)
+## Status (2026-07-05)
 
-| Run | Training | v1 Probing | v2 Probing | Excess (v1) | Excess (v2) | Analysis |
-|-----|----------|-----------|-----------|-------------|-------------|----------|
-| Baseline | COMPLETE | COMPLETE (old probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
-| Comparison | COMPLETE | COMPLETE (old probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
-| Seed2 | COMPLETE | COMPLETE (new probes) | COMPLETE (spacing) | COMPLETE | COMPLETE | 13 findings |
-| NL-barrier | COMPLETE | COMPLETE (new probes) | COMPLETE (spacing) | COMPLETE (step-50 proxy*) | COMPLETE | 13 findings |
+| Run | Arch | Training | Probing | Excess | Ablation | Analysis |
+|-----|------|----------|---------|--------|----------|----------|
+| Baseline | NeoX MHA | COMPLETE | COMPLETE (v1+v2) | COMPLETE | COMPLETE | 17 findings |
+| Comparison | NeoX MHA | COMPLETE | COMPLETE (v1+v2) | COMPLETE | COMPLETE | 17 findings |
+| Seed2 | NeoX MHA | COMPLETE | COMPLETE (v1+v2) | COMPLETE | COMPLETE | 17 findings |
+| NL-barrier | NeoX MHA | COMPLETE | COMPLETE (v1+v2) | COMPLETE* | N/A | 17 findings |
+| Structok-baseline | NeoX MHA | COMPLETE | COMPLETE | COMPLETE | COMPLETE | 17 findings |
+| Structok-comparison | NeoX MHA | COMPLETE | COMPLETE | COMPLETE | N/A | 17 findings |
+| Llama-FineWeb | Llama GQA | COMPLETE | COMPLETE (131) | COMPLETE | COMPLETE | 17 findings |
 
-*NL-barrier step-0 checkpoint corrupted by disk-full event. Step-50 base rates used as proxy for excess correction in both v1 and v2. Defensible: 50 steps = 0.008% of corpus, attention still approximately random.
+*NL-barrier step-0 checkpoint corrupted by disk-full event. Step-50 base rates used as proxy for excess correction. Defensible: 50 steps = 0.008% of corpus, attention still approximately random.
 
-All 524 checkpoints on R2. 1048 probe results (524 v1 + 524 v2) on R2 and committed to `results/`. Excess-corrected results in `results/{run}-excess/` (v1) and `results/{run}-v2-excess/` (v2). 9 visualization charts in `charts/` (from v1 data; v2 charts pending). 13 findings documented in RESULTS.md. Paper draft in `paper/developmental-atlas.md` (needs revision for v2 findings).
+All 917 checkpoints (7 runs x 131) on R2. 1,572 probe results on R2 and committed to `results/`. 40 visualization charts in `charts/`. 17 findings documented in RESULTS.md. Paper in `paper/developmental-atlas.md` (15 figures, 11 tables, 698 lines). Downstream benchmark in `results/benchmark/` (3 models). All data also on HuggingFace (7 step-20000 checkpoints + 3 tokenizers).
 
 ## Roadmap
 
@@ -358,77 +362,68 @@ COMPLETE (2026-07-05). Probed 4 existing Llama checkpoints from the coupling pap
 
 **Cost:** ~$0.50 (inference only, existing checkpoints).
 
-### Remaining: Downstream Task Benchmark
+### Completed: Downstream Completion Benchmark
 
-Tests whether the capacity tax translates into measurable task performance differences (accuracy, not just PPL). Uses existing NeoX 410M baseline vs comparison checkpoints on FineWeb. Inference only, no training.
+Tests whether the capacity tax translates into measurable next-token prediction accuracy differences. An initial instruction-following benchmark (QA format, `eval/benchmark_downstream.py`) produced 0% on both models because 410M/20K-step models cannot instruction-follow. The benchmark was redesigned as completion-based tasks (`eval/benchmark_completion.py`) measuring next-token prediction accuracy on structural text.
 
-#### Design principles
+#### Results (2026-07-05)
 
-- Same architecture, same training data, only tokenizer differs (baseline vs comparison)
-- Tasks simple enough for 410M (not MMLU or HumanEval, too hard at this scale)
-- Mix of structural tasks (where boundary recovery matters) and prose tasks (where it shouldn't)
-- Accuracy on each task, not PPL. Binary correct/incorrect. 100 examples per task.
-- The comparison model should win on structural tasks and tie on prose
+COMPLETE. Three models tested: NeoX baseline, Llama baseline, NeoX comparison.
 
-#### Proposed tasks
+| Task | NeoX Baseline | Llama Baseline | NeoX Comparison |
+|------|--------------|---------------|----------------|
+| Bracket closing | 13.0% | 3.0% | 22.0% |
+| JSON structure | 19.0% | 10.0% | 15.0% |
+| Pattern continuation | 0.0% | 0.0% | 0.0% |
+| Overall structural accuracy | 4.1% | 3.0% | 16.7% |
+| Whitespace space prediction | 72.0% | 55.0% | 0.0% |
+| Whitespace word prediction | 8.0% | 7.0% | 15.0% |
 
-| Task | What it tests | Expected effect | How to measure |
-|------|--------------|-----------------|----------------|
-| Bracket matching | Given nested `([{}])`, is it balanced? | Large: baseline 4 bracket heads, comparison 39 | Generate 100 balanced/unbalanced bracket sequences, prompt model to predict "balanced" or "unbalanced", measure accuracy |
-| Duplicate detection | Which word appears twice in this list? | Large: ablation showed +405% degradation when spacing removed | Generate 100 word lists with one duplicate, prompt model to identify it, measure accuracy |
-| Field extraction | What is the value of field X in this JSON/GCF payload? | Large: delimiter heads + structural processing | Generate 100 small payloads (5-10 fields), ask for a specific field value, measure exact match accuracy |
-| Code completion | Complete this Python function | Medium: code depends on bracket/delimiter boundaries | 100 simple function completions (reverse a list, sum elements), measure whether output is syntactically valid |
-| Sentence boundary | Where does the second sentence start? | Medium: spacing-dependent | 100 two-sentence passages, ask which word starts the second sentence, measure accuracy |
-| Prose QA | Answer a question about a paragraph | Small: NL is redundant, spacing shouldn't matter | 100 simple factual questions about short paragraphs, measure accuracy |
+Per-token-type structural accuracy:
 
-#### Implementation
+| Token type | NeoX Baseline | Llama Baseline | NeoX Comparison |
+|-----------|--------------|---------------|----------------|
+| Bracket | 0.0% | 9.5% | 19.8% |
+| Delimiter | 2.2% | 1.1% | 25.5% |
+| Spacing | 47.4% | 36.8% | 0.0% |
 
-Write `eval/benchmark_downstream.py` that:
-1. Loads a checkpoint and tokenizer
-2. For each task, generates 100 test examples programmatically (no external dataset dependency)
-3. Runs each example through the model using greedy next-token prediction
-4. Scores accuracy per task
-5. Reports per-task accuracy for baseline vs comparison
-6. Outputs JSON with all results
+The capacity tax translates directly to downstream accuracy. Both standard BPE models show the same pattern: high spacing prediction, low structural accuracy. Merge barriers invert this (0% spacing, 19.8% bracket, 25.5% delimiter). Spacing accuracy correlates with head count (47.4% NeoX with 183 heads, 36.8% Llama with 154 heads). The comparison model predicts the actual next word more often (15% vs 8%) despite never predicting a space token.
 
-#### Checkpoints to test
+**Cost:** ~$0.20 (inference only, RTX 4090, ~5 min per model).
 
-| Model | Checkpoint | Source |
-|-------|-----------|--------|
-| NeoX 410M baseline (standard BPE) | HF: blackwell-systems/attention-head-atlas/baseline-step-20000.pt | FineWeb trained |
-| NeoX 410M comparison (merge barriers) | HF: blackwell-systems/attention-head-atlas/comparison-step-20000.pt | FineWeb trained |
+Source: `eval/benchmark_completion.py`. Results in `results/benchmark/` and on R2 at `atlas/results/benchmark/`.
 
-#### Expected results
+### Completed: Llama Developmental Atlas (Llama-FineWeb-Baseline)
 
-The comparison model should show:
-- Higher accuracy on bracket matching (39 bracket heads vs 4)
-- Higher accuracy on duplicate detection (spacing heads freed for other work)
-- Higher accuracy on field extraction (more delimiter heads)
-- Similar or higher accuracy on code completion
-- Similar accuracy on prose QA (no NL cost from merge barriers)
+Full 131-checkpoint developmental analysis of Llama 410M trained on FineWeb. Architecture replication of the NeoX developmental atlas: not just "spacing exists in Llama" but "spacing follows the same developmental program across architectures."
 
-If the comparison model wins on structural tasks with no regression on prose, the capacity tax claim has downstream task validation.
+#### Results (2026-07-05)
 
-#### Cost
+COMPLETE. Training, probing (131 checkpoints), excess correction, ablation, UMAP extraction, charts all done.
 
-Inference only. Can run on any GPU instance or locally on CPU (slower). No training needed. The checkpoints are on HuggingFace.
+**Landmark result:** Spacing ablation NeoX MHA +64.3%, Llama GQA +67.0%. The capacity tax is BPE-dependent, not architecture-dependent.
 
-### Remaining: Llama Developmental Atlas (Llama-FineWeb-Baseline)
+**Head type distribution (excess-corrected, step 20000):**
 
-Full 131-checkpoint developmental analysis of Llama 410M trained on FineWeb. This is the architecture replication of the NeoX developmental atlas: not just "spacing exists in Llama" but "spacing follows the same developmental program across architectures."
+| Type | NeoX 410M | Llama 410M |
+|------|-----------|------------|
+| Spacing | 183 (47.7%) | 154 (40.1%) |
+| P0 | 32 (8.3%) | 31 (8.1%) |
+| Delimiter | 74 (19.3%) | 92 (24.0%) |
+| Positional_prev | 68 (17.7%) | 72 (18.8%) |
 
-#### Purpose
+**Predictions vs observed:**
 
-The NeoX atlas has developmental trajectories for 4 runs (baseline, comparison, seed2, NL-barrier) plus 2 structok corpus runs. All are MHA. Adding the Llama developmental trajectory answers:
+| Metric | Predicted | Observed | Assessment |
+|--------|-----------|----------|------------|
+| Final spacing count | 50-80 (~15%) | 154 (40.1%) | **Prediction falsified.** FineWeb-trained Llama has much more spacing than structok-trained Llama (154 vs 60). Earlier low count was corpus effect. |
+| Final P0 count | 80-100 (~23%) | 31 (8.1%) | **Prediction falsified.** P0 count essentially identical to NeoX (31 vs 32), not elevated as endpoint probes suggested. |
+| Ablation: spacing removal | +20-60% PPL | +67.0% | Above predicted range. Nearly identical to NeoX (+64.3%). |
+| Ablation: P0 removal | ~0-5% PPL | -3.4% | Confirmed: P0 useless on both architectures. |
 
-1. **When do spacing heads emerge in GQA?** Same training step as MHA, or earlier/later?
-2. **Does GQA change the emergence dynamics?** With 4 KV heads shared across 16 query heads, do spacing heads cluster within KV groups or distribute evenly?
-3. **Does the spacing fin appear in Llama UMAP?** Wang et al.'s spacing fin was observed on MHA. Does it manifest differently with GQA?
-4. **Is the P0 surge simultaneous across architectures?** NeoX P0 emerges around step 200-400. Same in Llama?
+The falsified predictions are themselves findings: the earlier structok-trained Llama probes (60 spacing, 90 P0) reflected corpus effects, not architecture effects. With the same corpus and tokenizer, Llama and NeoX converge on similar distributions.
 
 #### Training
-
-Currently running (2026-07-05). Llama 410M on FineWeb with standard-64k tokenizer.
 
 | Parameter | Value |
 |-----------|-------|
@@ -526,27 +521,51 @@ Results locally in `results/llama-fineweb-baseline/` and `results/llama-fineweb-
 
 Without developmental data, the Llama finding is a single data point: "spacing exists at endpoint." With 131 checkpoints, we can show spacing follows a developmental program that is conserved across architectures, even though GQA changes the quantitative distribution. This is the difference between "we measured it" and "we understand it."
 
-### Remaining: Llama Ablation (clean, FineWeb-trained)
+### Completed: Llama Ablation (clean, FineWeb-trained)
 
-The Llama ablation from run-003/004 checkpoints was INCONCLUSIVE because those models were trained on structok corpus but probed on FineWeb texts (distribution mismatch, baseline PPL 150K-314K). The llama-fineweb-baseline run fixes this: same corpus as NeoX baseline, clean ablation comparison.
+COMPLETE (2026-07-05). Included in Llama Developmental Atlas above. The earlier Llama ablation from run-003/004 checkpoints was INCONCLUSIVE (structok corpus, baseline PPL 150K-314K). The FineWeb-trained Llama gives clean results: +67.0% spacing ablation, -3.4% P0 ablation.
 
-**Cost:** Included in Llama Developmental Atlas above (ablation runs on the same step-20000 checkpoint).
+### Remaining: Causal circuit intervention
 
-### 3. Downstream task impact
+The circuit protection finding is correlational (100% P0 isolation). To make it causal: modify the training loop to add a regularization term that couples an isolated head's trajectory to a circuit member's trajectory, then train and observe whether the coupled head avoids P0 collapse. This would convert the correlational circuit protection finding into a causal one, which would be a standalone contribution to the mechanistic interpretability literature.
 
-The ablation measures PPL change, not task accuracy. Showing that merge barriers improve actual benchmark scores (MMLU, HumanEval, structured data comprehension tasks) would connect the capacity tax to metrics model providers already track. This bridges the gap between "heads are reallocated" and "the reallocation matters for performance."
+#### Design
 
-**Cost:** Depends on benchmark suite. Evaluation only, no training.
+1. Identify heads that collapse into P0 in the baseline model (known from Finding 2: median sink step 11,000).
+2. Before training a new model, select 5-10 of these "doomed" head positions.
+3. Add a regularization term to the training loss that encourages each doomed head's attention pattern to correlate with a nearby circuit member's pattern. The coupling strength should be modest (e.g., lambda=0.01) so it nudges rather than forces.
+4. Train for 20,000 steps with the same hyperparameters as baseline.
+5. At convergence, check: did the coupled heads avoid P0 collapse? Did they develop productive specialization? Did the circuit they were coupled to grow or change?
+6. Control: train a second run with the regularization term applied to random non-doomed heads (to verify the effect is specific to coupling, not to regularization in general).
 
-### 4. Causal circuit intervention
+#### Infrastructure
 
-The circuit protection finding is correlational (100% P0 isolation). To make it causal: artificially couple an isolated head into a circuit during training (e.g., by adding a regularization term that correlates its trajectory with a circuit member) and show it survives instead of collapsing into P0. This would establish that circuits are causally protective, not merely co-occurring with survival.
+All existing infrastructure supports this:
+- `train_atlas.py`: training loop (add regularization term)
+- `probe_heads.py`: probing at 131 checkpoints (unchanged)
+- `excess_score_correction.py`: excess correction (unchanged)
+- `analyze_p0_deep.py`: P0 tracking (unchanged)
+- `analyze_seed2.py`: circuit identification (use to find target circuit members)
 
-**Cost:** Requires custom training loop modification. Moderate effort.
+The engineering work is the custom regularization term and verifying it doesn't destabilize training.
+
+#### Predictions
+
+| Condition | P0 collapse of doomed heads | Rationale |
+|-----------|---------------------------|-----------|
+| Coupled to circuit member | Reduced (< 50% sink) | Circuit provides mutual reinforcement |
+| Coupled to random head | No change (> 80% sink) | Random coupling doesn't create stable circuits |
+| No coupling (baseline) | 100% sink | Known from Finding 2 |
+
+The strongest result: coupled heads survive AND develop the same specialization as their circuit partner. This would prove circuits are causally protective, not merely co-occurring with survival.
+
+**Cost:** 2 training runs (~$5), 2 probing runs (~$0.80). ~$6 total. ~1 week of focused engineering for the regularization term.
+
+**Impact:** If successful, this is a standalone contribution to mechanistic interpretability: the first causal demonstration that developmental circuits protect heads from collapse. Independent of the tokenizer/spacing findings.
 
 ### Priority order
 
-Experiment 2 (1.3B spacing probe) is the highest-value, lowest-cost next step. The checkpoint exists. The probe script exists. One inference run answers whether spacing scales. If it does, that single data point eliminates the most common objection to the paper.
+Scale replication (1.3B or larger full developmental atlas) is the highest-value remaining step. The Llama architecture replication is complete; the remaining gap is scale, not architecture. Circuit causality (custom training loop with regularization) would require the most engineering effort.
 
 ## Relationship to Prior Work
 
