@@ -800,6 +800,126 @@ def chart_ablation_cross_architecture(use_excess=False):
     save(fig, 'ablation-cross-architecture')
 
 
+def chart_benchmark_structural_accuracy(use_excess=False):
+    """Per-token-type structural accuracy across three models."""
+    benchmark_dir = RESULTS_DIR / 'benchmark'
+    if not benchmark_dir.exists():
+        return
+
+    models = []
+    for name, fname in [('NeoX Baseline\n(standard BPE)', 'completion-baseline.json'),
+                         ('Llama Baseline\n(standard BPE)', 'completion-llama.json'),
+                         ('NeoX Comparison\n(merge barriers)', 'completion-comparison.json')]:
+        path = benchmark_dir / fname
+        if not path.exists():
+            continue
+        with open(path) as f:
+            d = json.load(f)
+        by_type = d['results']['structural_accuracy']['by_type']
+        models.append((name, by_type))
+
+    if len(models) < 2:
+        return
+
+    token_types = ['bracket', 'delimiter', 'spacing']
+    type_labels = {'bracket': 'Bracket', 'delimiter': 'Delimiter', 'spacing': 'Spacing'}
+    model_colors = ['#ff4444', '#facc15', '#18befc']
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    setup_ax(ax, 'Structural Token Prediction Accuracy\n'
+             'The capacity tax translates directly to downstream accuracy',
+             ylabel='Top-1 accuracy (%)')
+
+    x = np.arange(len(token_types))
+    width = 0.25
+    edge = GRID if LIGHT else BG
+
+    for i, (name, by_type) in enumerate(models):
+        vals = [by_type.get(t, {}).get('accuracy', 0) * 100 for t in token_types]
+        bars = ax.bar(x + (i - 1) * width, vals, width, label=name.replace('\n', ' '),
+                      color=model_colors[i], edgecolor=edge, linewidth=0.5)
+        for bar, v in zip(bars, vals):
+            if v > 0:
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.8,
+                       '%.1f%%' % v, ha='center', va='bottom', fontsize=8, color=TEXT)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([type_labels[t] for t in token_types], fontsize=11)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+    ax.set_ylim(0, max(55, ax.get_ylim()[1]))
+
+    save(fig, 'benchmark-structural-accuracy')
+
+
+def chart_benchmark_task_comparison(use_excess=False):
+    """Task-level accuracy across three models."""
+    benchmark_dir = RESULTS_DIR / 'benchmark'
+    if not benchmark_dir.exists():
+        return
+
+    models = []
+    for name, fname in [('NeoX Baseline', 'completion-baseline.json'),
+                         ('Llama Baseline', 'completion-llama.json'),
+                         ('NeoX Comparison', 'completion-comparison.json')]:
+        path = benchmark_dir / fname
+        if not path.exists():
+            continue
+        with open(path) as f:
+            d = json.load(f)
+        models.append((name, d['results']))
+
+    if len(models) < 2:
+        return
+
+    tasks = ['bracket_closing', 'json_structure', 'structural_accuracy']
+    task_labels = {
+        'bracket_closing': 'Bracket\nclosing',
+        'json_structure': 'JSON\nstructure',
+        'structural_accuracy': 'Overall\nstructural',
+    }
+    model_colors = ['#ff4444', '#facc15', '#18befc']
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Left: task accuracy
+    ax = axes[0]
+    setup_ax(ax, 'Task Accuracy', ylabel='Accuracy (%)')
+    x = np.arange(len(tasks))
+    width = 0.25
+    edge = GRID if LIGHT else BG
+
+    for i, (name, results) in enumerate(models):
+        vals = [results[t]['accuracy'] * 100 for t in tasks]
+        ax.bar(x + (i - 1) * width, vals, width, label=name,
+               color=model_colors[i], edgecolor=edge, linewidth=0.5)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([task_labels[t] for t in tasks], fontsize=10)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    # Right: whitespace prediction (space vs word accuracy)
+    ax = axes[1]
+    setup_ax(ax, 'Whitespace Prediction', ylabel='Accuracy (%)')
+
+    ws_metrics = ['space_accuracy', 'word_accuracy']
+    ws_labels = ['Predicts\nspace token', 'Predicts\ncorrect word']
+    x = np.arange(len(ws_metrics))
+
+    for i, (name, results) in enumerate(models):
+        ws = results['whitespace_prediction']
+        vals = [ws.get(m, 0) * 100 for m in ws_metrics]
+        ax.bar(x + (i - 1) * width, vals, width, label=name,
+               color=model_colors[i], edgecolor=edge, linewidth=0.5)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(ws_labels, fontsize=10)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    fig.suptitle('Downstream Completion Benchmark: Capacity Tax in Action',
+                fontsize=13, fontweight='bold', color=TEXT)
+    save(fig, 'benchmark-task-comparison')
+
+
 ALL_CHARTS = [
     chart_developmental_timeline,
     chart_entropy_three_way,
@@ -815,6 +935,8 @@ ALL_CHARTS = [
     chart_capacity_tax,
     chart_cross_architecture_emergence,
     chart_ablation_cross_architecture,
+    chart_benchmark_structural_accuracy,
+    chart_benchmark_task_comparison,
 ]
 
 STANDALONE_CHARTS = [
