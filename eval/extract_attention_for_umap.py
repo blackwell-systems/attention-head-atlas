@@ -93,6 +93,8 @@ def main():
     parser.add_argument("--probe-dir", default="probes/")
     parser.add_argument("--output", required=True, help="Output .npz path")
     parser.add_argument("--run-name", default="unknown")
+    parser.add_argument("--size", default="410m", choices=["410m", "410m-llama"],
+                       help="Model size/arch")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 
@@ -105,16 +107,25 @@ def main():
 
     # Load model
     from tokenizers import Tokenizer
-    from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
-
     tok = Tokenizer.from_file(args.tokenizer)
     vocab_size = tok.get_vocab_size()
 
-    config = GPTNeoXConfig(
-        vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
-        num_attention_heads=16, intermediate_size=4096,
-        max_position_embeddings=2048, attn_implementation="eager")
-    model = GPTNeoXForCausalLM(config).to(args.device)
+    if args.size == "410m-llama":
+        from transformers import LlamaConfig, LlamaForCausalLM
+        config = LlamaConfig(
+            vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
+            num_attention_heads=16, num_key_value_heads=4,
+            intermediate_size=2816, max_position_embeddings=2048,
+            rope_theta=500000.0, use_cache=False,
+            attn_implementation="eager")
+        model = LlamaForCausalLM(config).to(args.device)
+    else:
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        config = GPTNeoXConfig(
+            vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
+            num_attention_heads=16, intermediate_size=4096,
+            max_position_embeddings=2048, attn_implementation="eager")
+        model = GPTNeoXForCausalLM(config).to(args.device)
     model.eval()
 
     # Load checkpoint

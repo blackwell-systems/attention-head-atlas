@@ -412,17 +412,20 @@ Zero-ablation study following the methodology from Blackwell (2026a, Section 5.3
 | NeoX 410M Structok | MHA | 172 | +68.9% | -2.8% | +0.5% |
 | NeoX 410M Barriers | MHA | 13 | +15.1% | +8.3% | +0.2% |
 
-### Per-text breakdown (FineWeb baseline)
+### Per-text breakdown (cross-architecture)
 
-| Probe | Spacing ablation | Random control |
-|-------|-----------------|----------------|
-| Duplicates | +405.1% | (included in mean) |
-| Brackets | +61.2% | |
-| Code | +59.6% | |
-| Structured | +35.7% | |
-| Prose | +35.8% | |
-| Prose punctuated | +21.6% | |
-| Induction | +18.3% | |
+| Probe | NeoX MHA | Llama GQA |
+|-------|----------|-----------|
+| Duplicates | +405.1% | +148.1% |
+| Induction | +18.3% | +76.4% |
+| Code | +59.6% | +60.3% |
+| Structured | +35.7% | +44.6% |
+| Brackets | +61.2% | +44.7% |
+| Prose | +35.8% | +3.2% |
+| Prose punctuated | +21.6% | +17.1% |
+| **Mean** | **+64.3%** | **+67.0%** |
+
+The means are nearly identical but the per-text pattern differs. Duplicates degrades much less on Llama (+148% vs +405%), while induction degrades much more (+76% vs +18%). Code is almost identical (+60% on both). The architectures redistribute the spacing dependency across tasks differently, but the total cost is the same.
 
 ### Key findings
 
@@ -483,6 +486,8 @@ Full embryological analysis: Llama 410M trained on FineWeb with standard-64k tok
 **Spacing is the dominant specialization on both architectures.** NeoX: 183/384 (47.7%). Llama: 154/384 (40.1%). The FineWeb-trained Llama shows much higher spacing than the structok-trained Llama (154 vs 60), confirming that the earlier lower count was a corpus effect, not an architecture effect.
 
 **Total non-productive capacity.** NeoX: 56% (183 spacing + 32 P0). Llama: 48% (154 spacing + 31 P0). Closer than the endpoint-only probes suggested.
+
+**Frustration gap is zero on Llama FineWeb.** 0.49 pp, 28/384 heads woke up. Same zero-gap pattern as NeoX. Confirmed on GQA with FineWeb corpus.
 
 **Developmental trajectories are conserved.** The 131-checkpoint embryology shows spacing heads emerging in the same training window on both architectures. See cross-architecture emergence charts.
 
