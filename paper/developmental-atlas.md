@@ -549,6 +549,31 @@ To test whether the capacity tax is specific to multi-head attention or a genera
 
 This result has a specific implication for the mechanistic interpretability literature. Studies of attention head specialization (Voita et al., 2019; Gu et al., 2025; Sandoval-Segura et al., 2025) have been conducted exclusively on multi-head attention architectures. The Llama replication shows that the spacing tax and P0 failure mode are not MHA-specific phenomena; they persist under grouped query attention. Any model trained with standard BPE pays this tax, regardless of how its attention mechanism is organized.
 
+### 4.16 Downstream Completion Benchmark
+
+The ablation study (Section 4.13) measures the capacity tax in perplexity. Does it also translate to next-token prediction accuracy on structural text? An initial instruction-following benchmark (QA format) produced 0% accuracy on both models, confirming that 410M models trained for 20,000 steps cannot instruction-follow. We redesigned the benchmark as completion tasks measuring top-1 next-token prediction accuracy, which raw language models can perform.
+
+We measure per-token-type accuracy on structured text (JSON objects, nested JSON, Go code, bracket sequences) across three models: NeoX baseline, Llama baseline, and NeoX comparison (merge barriers). Each token is classified by type (bracket, delimiter, spacing, content, numeric), and accuracy is computed per type.
+
+**Table 12: Per-token-type structural prediction accuracy**
+
+| Token type | NeoX Baseline | Llama Baseline | NeoX Comparison |
+|-----------|--------------|---------------|----------------|
+| Bracket | 0.0% | 9.5% | 19.8% |
+| Delimiter | 2.2% | 1.1% | 25.5% |
+| Spacing | 47.4% | 36.8% | 0.0% |
+| Overall structural | 4.1% | 3.0% | 16.7% |
+
+The capacity tax translates directly to downstream accuracy. The comparison model (merge barriers) predicts brackets at 19.8% and delimiters at 25.5%, while the NeoX baseline predicts 0.0% and 2.2% respectively. The baseline dominates spacing prediction (47.4%), consistent with its 183 spacing heads dedicated to exactly this task. The Llama baseline shows the same pattern at lower magnitude (36.8% spacing, consistent with its 154 spacing heads).
+
+On a bracket-closing task (predicting the correct closing bracket for nested sequences), the comparison model scores 22.0% vs 13.0% baseline and 3.0% Llama. On whitespace prediction, the baseline predicts space tokens 72% of the time but gets the actual next word right only 8% of the time. The comparison model predicts space tokens 0% of the time but gets the correct word 15% of the time. The baseline is better at predicting whitespace; the comparison model is better at predicting content.
+
+![Figure 16: Per-token-type structural prediction accuracy across three models. Merge barriers convert spacing capacity into structural prediction ability.](../charts/benchmark-structural-accuracy.png){ width=85% }
+
+![Figure 17: Downstream completion benchmark. Left: task accuracy across bracket closing, JSON structure, and overall structural accuracy. Right: whitespace prediction showing the baseline predicts spaces while the comparison predicts words.](../charts/benchmark-task-comparison.png){ width=95% }
+
+Source: `eval/benchmark_completion.py`. Data in `results/benchmark/` and on R2 at `atlas/results/benchmark/`. 100 examples per task, deterministic generation (seed=42), greedy top-1 decoding, 10 max new tokens.
+
 ## 5. Discussion
 
 ### 5.1 The Capacity Tax: P0 Collapse and Mandatory Spacing Recovery
@@ -599,7 +624,9 @@ For natural language models, period and hyphen barriers alone would address the 
 
 Circuit topology is robust to tokenizer changes. All three tokenizer conditions produce the same type of circuit backbone (positional_prev spanning approximately 14 layers). This means model providers can adopt merge barriers without disrupting the fundamental organizational structure of their models. The change improves head utilization without altering the circuit topology that the model relies on.
 
-These findings address three communities. For **model providers**, the capacity tax is quantified and the fix is trivial: 16 lines of tokenizer configuration recover approximately half of all attention capacity. For **mechanistic interpretability researchers**, the atlas introduces spacing as a behavior type that prior taxonomies missed, provides a new methodology for circuit discovery through developmental timing, and offers causal proof that P0 heads contribute nothing. For **tokenizer and BPE researchers**, the adversarial surface analysis and the two-regime model establish that BPE merge decisions have permanent, measurable consequences for model internals that extend far beyond token-level compression efficiency.
+The capacity tax is not only a PPL effect. The downstream completion benchmark (Section 4.16) shows that merge barriers improve structural token prediction accuracy by 4x (16.7% vs 4.1%), with bracket prediction rising from 0% to 19.8% and delimiter prediction from 2.2% to 25.5%. Standard BPE models are better at predicting whitespace (47.4% accuracy, consistent with 183 spacing heads dedicated to this task) but worse at predicting structural tokens and actual content words. The capacity reallocation from spacing to structural processing produces measurable accuracy improvements on the tasks that structural heads perform.
+
+These findings address three communities. For **model providers**, the capacity tax is quantified, proven across architectures, and shown to affect downstream accuracy; the fix is trivial: 16 lines of tokenizer configuration recover approximately half of all attention capacity. For **mechanistic interpretability researchers**, the atlas introduces spacing as a behavior type that prior taxonomies missed, provides a new methodology for circuit discovery through developmental timing, and offers causal proof that P0 heads contribute nothing. For **tokenizer and BPE researchers**, the adversarial surface analysis and the two-regime model establish that BPE merge decisions have permanent, measurable consequences for model internals that extend far beyond token-level compression efficiency.
 
 ## 6. Limitations
 
@@ -645,6 +672,8 @@ The two-regime model provides the unifying synthesis, validated across two corpo
 
 Circuits are developmentally protective. 100% of P0 heads are isolated from co-specializing circuits, while heads that wire together survive. This establishes a novel functional role for circuits beyond computation: they provide mutual reinforcement that stabilizes specialization during training.
 
+The capacity tax affects downstream accuracy, not just perplexity. Completion benchmarks show that merge barriers improve structural token prediction by 4x (16.7% vs 4.1%), with bracket accuracy rising from 0% to 19.8% and delimiter accuracy from 2.2% to 25.5%. Standard BPE models are better at predicting whitespace tokens (47.4%) but worse at predicting the structural tokens and content words that matter for task performance.
+
 Merge barriers fix both damage regimes on both architectures. NL barriers eliminate spacing heads entirely (0) and structured barriers reduce them to 13. The barrier mechanism is universal across character sets (r=0.812 between two different barrier sets, both diverging sharply from baseline at r=-0.096 and r=-0.403) and across architectures (the capacity tax is architecture-independent, proven by essentially identical ablation costs on MHA and GQA). The developmental outcome is determined by the tokenizer: isolating any structural delimiters prevents both spacing proliferation and P0 collapse, regardless of how attention is organized. Every model trained with standard BPE pays this capacity tax, and a simple tokenizer configuration change eliminates it.
 
 ## References
@@ -687,7 +716,7 @@ Xu, Z. (2026). When do attention circuits form? *arXiv:2606.02378*.
 
 All experiments can be reproduced on a single GPU (A100 or RTX 4090).
 
-**Code.** All training, probing, and analysis scripts are available at github.com/blackwell-systems/attention-head-atlas. Training uses `eval/train_atlas.py`. Probing uses `eval/probe_heads.py` (7 behaviors including spacing, hardened with disk checks, verified uploads, OOM recovery, auto-versioning). Excess correction uses `eval/excess_score_correction.py`. Circuit discovery uses `eval/analyze_seed2.py` (position circuits) and `eval/analyze_velocity_circuits.py` (velocity circuits). P0 deep analysis uses `eval/analyze_p0_deep.py`. NL-barrier analysis uses `eval/analyze_nl_barrier.py`. NL frustration gap measurement uses `eval/measure_nl_frustration_gap.py`.
+**Code.** All training, probing, and analysis scripts are available at github.com/blackwell-systems/attention-head-atlas. Training uses `eval/train_atlas.py` (supports `--arch llama`). Probing uses `eval/probe_heads.py` (7 behaviors including spacing, supports `--size 410m-llama`). Excess correction uses `eval/excess_score_correction.py` (auto-detects head count). Ablation uses `eval/ablate_spacing_heads.py` (multi-architecture). UMAP extraction uses `eval/extract_attention_for_umap.py`. Downstream benchmark uses `eval/benchmark_completion.py`. Circuit discovery uses `eval/analyze_seed2.py` and `eval/analyze_velocity_circuits.py`. P0 deep analysis uses `eval/analyze_p0_deep.py`. NL-barrier analysis uses `eval/analyze_nl_barrier.py`. NL frustration gap measurement uses `eval/measure_nl_frustration_gap.py`.
 
 **Data.** All 917 training checkpoints (131 per run, 7 runs) are archived on Cloudflare R2 in the `structok-training` bucket under the `atlas/` prefix. Probe results (7 behaviors including spacing) are in `results/{run}-v2/` and `results/{run}-v2-excess/` for NeoX FineWeb runs, `results/structok-baseline/` and `results/structok-comparison/` for structok corpus runs, and `results/llama-fineweb-baseline/` and `results/llama-fineweb-baseline-excess/` for the Llama run. All results are also archived on R2. Ablation results are in `results/ablation/`. NL frustration gap results are in `results/nl-frustration-gap/`. Step-20000 checkpoints for all 7 runs and all 3 tokenizers are available on HuggingFace (blackwell-systems/attention-head-atlas). The structok corpus pretokenized bins (`tokens/standard-64k-v2.bin`, `tokens/structok-64k-v2.bin`) are from the merge-barriers paper (Blackwell, 2026a, run-002), with provenance documented in `structok/prep_run002.py`.
 
