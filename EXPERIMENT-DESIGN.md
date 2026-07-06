@@ -563,9 +563,125 @@ The strongest result: coupled heads survive AND develop the same specialization 
 
 **Impact:** If successful, this is a standalone contribution to mechanistic interpretability: the first causal demonstration that developmental circuits protect heads from collapse. Independent of the tokenizer/spacing findings.
 
+### Remaining: Unclassified Head Identification (Activation Patching)
+
+The merge-barrier comparison model has 95 unclassified heads (24.7%) with excess scores below 0.02 across all 7 measured behaviors. These heads are freed from the spacing tax and are doing something our taxonomy doesn't capture. Identifying what they do completes the picture of what a healthy model looks like.
+
+#### Method: Activation Patching
+
+For each of the 95 unclassified heads, swap its activations from a corrupted input into a clean forward pass and measure what breaks. If patching head H causes the model to lose a specific capability, H is performing that function.
+
+#### Behavior hypotheses and input pairs
+
+**1. Subject-verb agreement (syntax)**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| The cat that chased the dogs was tired | The cat that chased the dogs were tired | Prediction shifts was -> were |
+| The teacher with the students walks home | The teacher with the students walk home | Prediction shifts walks -> walk |
+| The box of chocolates is on the table | The box of chocolates are on the table | Prediction shifts is -> are |
+
+20 pairs. Vary attractor noun number (singular subject, plural attractor). If patching a head shifts the model toward the wrong verb form, that head is tracking syntactic agreement across intervening material.
+
+**2. Coreference / entity tracking**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| Alice gave Bob a book. She smiled. | Alice gave Bob a book. He smiled. | Prediction shifts she -> he |
+| The doctor told the nurse that she was right | The doctor told the nurse that he was right | Pronoun resolution changes |
+
+20 pairs. Swap gendered entities to flip coreference. If patching a head changes pronoun prediction, it's tracking entity identity.
+
+**3. Semantic similarity / content association**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| The dog chased the ball across the yard | The dog chased the lamp across the yard | Next-word prediction changes |
+| She drank a cup of coffee | She drank a cup of gravel | Plausibility judgment shifts |
+
+20 pairs. Replace a semantically coherent object with an incoherent one. If patching shifts predictions toward the incoherent continuation, the head is doing semantic compatibility.
+
+**4. Local context / n-gram prediction**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| New York City is a large | Old Blue Tree is a large | Next-word prediction changes |
+| Once upon a time there was a | Brick under a time there was a | Prediction shifts |
+
+20 pairs. Corrupt local context while preserving global structure. If patching disrupts prediction, the head is doing local n-gram processing.
+
+**5. Clause / phrase boundary detection**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| When the rain stopped, the children played | When the rain stopped the children played | Comma-dependent clause boundary lost |
+| The man who wore a hat left | The man who wore a hat, left | Spurious boundary inserted |
+
+20 pairs. Add or remove clause boundaries. If patching disrupts cross-clause predictions, the head is tracking phrase structure.
+
+**6. Positional / distance-based attention**
+
+| Clean input | Corrupted input | Signal |
+|------------|----------------|--------|
+| A B C D E F G H I J | J I H G F E D C B A | Position-dependent predictions change |
+
+20 pairs. Reverse or shuffle token order. If patching changes predictions in a position-dependent way, the head is doing distance-based processing distinct from positional_prev.
+
+#### Protocol
+
+1. Load the NeoX comparison model (merge barriers, step-20000) from HuggingFace
+2. For each behavior category, generate 20 clean/corrupted input pairs (seed=42, deterministic)
+3. For each of the 95 unclassified heads:
+   a. Run clean input, record all head activations and final logits
+   b. Run corrupted input, record head H's activations
+   c. Replace head H's activations in the clean forward pass with the corrupted activations
+   d. Measure logit change at the critical token position
+   e. Score: magnitude of logit shift toward the corrupted prediction
+4. For each head, rank behavior categories by patching effect magnitude
+5. Classify: head is assigned to the behavior with the largest patching effect (if above threshold)
+6. Control: run the same protocol on 20 random non-unclassified heads to verify they show expected behavior (delimiter heads should respond to structural patching, spacing heads should not respond to syntactic patching)
+
+#### Implementation
+
+Write `eval/patch_unclassified_heads.py` that:
+1. Loads the comparison model and tokenizer
+2. Generates all input pairs programmatically (no external datasets)
+3. Implements activation patching via PyTorch forward hooks
+4. Runs all 95 heads x 6 behaviors x 20 pairs = 11,400 patching experiments
+5. Outputs per-head behavior classification with confidence scores
+6. Saves JSON results to `results/patching/`
+
+The patching mechanism uses `register_forward_hook` to capture activations on the corrupted pass, then `register_forward_pre_hook` to inject them on the clean pass. This is standard practice (Conmy et al., 2023; Wang et al., 2023).
+
+#### Expected results
+
+At 410M/20K steps, the model may not have developed strong syntactic capabilities. Expected distribution of the 95 heads:
+
+| Behavior | Expected count | Rationale |
+|----------|---------------|-----------|
+| Semantic similarity | 30-50 | Most common in small models |
+| Local context / n-gram | 20-30 | Basic pattern matching |
+| Subject-verb agreement | 5-15 | Requires deeper processing |
+| Coreference | 0-5 | Rare at this scale |
+| Clause boundary | 5-10 | Possible given freed capacity |
+| Positional / distance | 5-10 | Residual positional processing |
+| Still unclassified | 10-20 | Some heads may require SAEs |
+
+If more than 20 heads remain unclassified after patching, sparse autoencoders (Bricken et al., 2023; Cunningham et al., 2024) become the next methodology.
+
+#### Cost
+
+Inference only. 11,400 forward passes on a 410M model, each ~50ms on a 4090. Total: ~10 minutes. Add control runs: ~15 minutes. Total compute: ~$0.10.
+
+#### Why this matters
+
+The 95 unclassified heads are the answer to "what does a healthy model do with the capacity that merge barriers free up?" If they're doing syntax, coreference, and semantic processing, that directly demonstrates the practical value of merge barriers: not just fewer spacing heads, but more heads doing the work that matters for language understanding.
+
 ### Priority order
 
-Scale replication (1.3B or larger full developmental atlas) is the highest-value remaining step. The Llama architecture replication is complete; the remaining gap is scale, not architecture. Circuit causality (custom training loop with regularization) would require the most engineering effort.
+1. **Unclassified head identification (activation patching)**: lowest cost (~$0.10), highest novelty (completes the atlas), uses existing infrastructure. Could be Paper 4.
+2. **Scale replication (1.3B or larger)**: highest value for addressing the remaining limitation, moderate cost.
+3. **Circuit causality (regularization intervention)**: highest engineering effort, standalone contribution to interpretability.
 
 ## Relationship to Prior Work
 
