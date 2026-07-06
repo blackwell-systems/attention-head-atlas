@@ -1,0 +1,3270 @@
+{
+  "model": "Llama baseline (standard BPE, GQA)",
+  "checkpoint": "/root/hf/llama-fineweb-baseline-step-20000.pt",
+  "results": {
+    "bracket_closing": {
+      "accuracy": 0.03,
+      "total": 100,
+      "examples": [
+        {
+          "sequence": "(1",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "((x)",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{value",
+          "expected": "}",
+          "predicted": "to",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(x",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "({item}",
+          "expected": ")",
+          "predicted": "The",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{data",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "([{[x]}]",
+          "expected": ")",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{[1]",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "(([x])",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "[x",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "[{[x]}",
+          "expected": "]",
+          "predicted": "www",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{([(item)])",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{{[item]}",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{(x)",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[(data)",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[1",
+          "expected": "]",
+          "predicted": "00",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{[([1])]",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{[x]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{{data}",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[[1]",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{[x]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "([value]",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "(({1})",
+          "expected": ")",
+          "predicted": "0",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{[value]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "([((item))]",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{{[item]}",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "[(({value}))",
+          "expected": "]",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "(x",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{(value)",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[value",
+          "expected": "]",
+          "predicted": "to",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{[{(x)}]",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{[(1)]",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "([({1})]",
+          "expected": ")",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{(1)",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "([data]",
+          "expected": ")",
+          "predicted": ",",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{1",
+          "expected": "}",
+          "predicted": "2",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(([[data]])",
+          "expected": ")",
+          "predicted": "www",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "(item",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(value",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{data",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{[item]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[{item}",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "({{{data}}}",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "[{{1}}",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{[((data))]",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "[x",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{(x)",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{x",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "((1)",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{data",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{[(item)]",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{{item}",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "([[(x)]]",
+          "expected": ")",
+          "predicted": "to",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{value",
+          "expected": "}",
+          "predicted": "to",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "[[[x]]",
+          "expected": "]",
+          "predicted": "]",
+          "correct": true,
+          "depth": 3
+        },
+        {
+          "sequence": "(value",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(((data))",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "([([value])]",
+          "expected": ")",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "([item]",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "(item",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(data",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "[[value]",
+          "expected": "]",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[(data)",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "([[[1]]]",
+          "expected": ")",
+          "predicted": ",",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{{{{value}}}",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "([data]",
+          "expected": ")",
+          "predicted": ",",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{item",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{1",
+          "expected": "}",
+          "predicted": "2",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(item",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{{((item))}",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "(x",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{data",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "({({item})}",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{x",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{{{{1}}}",
+          "expected": "}",
+          "predicted": "\u201d",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "({{1}}",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "[[data]",
+          "expected": "]",
+          "predicted": ",",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[[(x)]",
+          "expected": "]",
+          "predicted": "the",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{{((item))}",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "{[data]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "(([1])",
+          "expected": ")",
+          "predicted": "",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "[{1}",
+          "expected": "]",
+          "predicted": ":",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{item",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "{((1))",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "(item",
+          "expected": ")",
+          "predicted": "the",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "[[item]",
+          "expected": "]",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{[data]",
+          "expected": "}",
+          "predicted": "]",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{[[x]]",
+          "expected": "}",
+          "predicted": ".",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{value",
+          "expected": "}",
+          "predicted": "to",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "(([data])",
+          "expected": ")",
+          "predicted": "",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "({[item]}",
+          "expected": ")",
+          "predicted": ".",
+          "correct": false,
+          "depth": 3
+        },
+        {
+          "sequence": "{(((data)))",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "[item",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 1
+        },
+        {
+          "sequence": "[(x)",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[([data])",
+          "expected": "]",
+          "predicted": "]",
+          "correct": true,
+          "depth": 3
+        },
+        {
+          "sequence": "{(1)",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "{{((data))}",
+          "expected": "}",
+          "predicted": "",
+          "correct": false,
+          "depth": 4
+        },
+        {
+          "sequence": "[(data)",
+          "expected": "]",
+          "predicted": "",
+          "correct": false,
+          "depth": 2
+        },
+        {
+          "sequence": "[{{data}}",
+          "expected": "]",
+          "predicted": "]",
+          "correct": true,
+          "depth": 3
+        },
+        {
+          "sequence": "({(value)}",
+          "expected": ")",
+          "predicted": "to",
+          "correct": false,
+          "depth": 3
+        }
+      ]
+    },
+    "json_structure": {
+      "accuracy": 0.1,
+      "total": 100,
+      "by_type": {
+        "close_quote": {
+          "correct": 10,
+          "total": 19,
+          "accuracy": 0.5263157894736842
+        },
+        "colon": {
+          "correct": 0,
+          "total": 23,
+          "accuracy": 0.0
+        },
+        "close_brace": {
+          "correct": 0,
+          "total": 25,
+          "accuracy": 0.0
+        },
+        "comma": {
+          "correct": 0,
+          "total": 33,
+          "accuracy": 0.0
+        }
+      },
+      "examples": [
+        {
+          "prompt_suffix": "{\"name\": \"Alice",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\", \"age\": 32",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 58",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 53",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "of",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\", \"age\": 24",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\", \"age\": 27",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\", \"age\": 46",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\", \"age\": 31",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "of",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\", \"age\": 55",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\", \"age\": 47",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "of",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\", \"age\": 30",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 49",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\", \"age\": 44",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\", \"age\": 40",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 57",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "of",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\", \"age\": 47",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\", \"age\": 56",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\", \"age\": 42",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\", \"age\": 57",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\", \"age\": 33",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 32",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Bob\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\", \"age\": 22",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\", \"age\": 44",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\", \"age\": 26",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "of",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Carol",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\u201d",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Alice\", \"age\": 49",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena\", \"age\": 22",
+          "test_type": "close_brace",
+          "expected": "}",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\"",
+          "test_type": "colon",
+          "expected": ":",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Frank\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"David\"",
+          "test_type": "comma",
+          "expected": ",",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "prompt_suffix": "{\"name\": \"Elena",
+          "test_type": "close_quote",
+          "expected": "\"",
+          "predicted": "\"",
+          "correct": true
+        }
+      ]
+    },
+    "pattern_continuation": {
+      "accuracy": 0.0,
+      "total": 100,
+      "examples": [
+        {
+          "pattern": [
+            "sun",
+            "north",
+            "key"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "alpha",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "key",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "dog",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "dog",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "one",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "sun",
+            "apple",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "dog",
+            "alpha"
+          ],
+          "partial_len": 0,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "dog",
+            "red",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "alpha",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "apple",
+            "red",
+            "key"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "alpha",
+            "dog",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "alpha",
+            "red"
+          ],
+          "partial_len": 2,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "red"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "sun",
+            "apple",
+            "north"
+          ],
+          "partial_len": 2,
+          "expected": "apple",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "sun",
+            "red",
+            "alpha"
+          ],
+          "partial_len": 3,
+          "expected": "alpha",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "one",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "dog",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "apple"
+          ],
+          "partial_len": 1,
+          "expected": "apple",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "alpha",
+            "dog",
+            "red"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "apple"
+          ],
+          "partial_len": 0,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "apple",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "apple",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "dog",
+            "apple",
+            "north"
+          ],
+          "partial_len": 3,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "sun",
+            "one"
+          ],
+          "partial_len": 2,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "dog"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "alpha"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "dog",
+            "key"
+          ],
+          "partial_len": 0,
+          "expected": "north",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "north",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "north",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "one"
+          ],
+          "partial_len": 0,
+          "expected": "alpha",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "apple"
+          ],
+          "partial_len": 1,
+          "expected": "apple",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "key",
+            "one",
+            "red"
+          ],
+          "partial_len": 3,
+          "expected": "red",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "alpha",
+            "north",
+            "apple"
+          ],
+          "partial_len": 2,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "apple",
+            "alpha",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "alpha",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "dog",
+            "north",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "apple",
+            "red"
+          ],
+          "partial_len": 2,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "dog",
+            "north"
+          ],
+          "partial_len": 2,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "apple",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "sun"
+          ],
+          "partial_len": 0,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "red",
+            "key",
+            "sun"
+          ],
+          "partial_len": 2,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "dog",
+            "apple",
+            "sun"
+          ],
+          "partial_len": 3,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "key"
+          ],
+          "partial_len": 0,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "key",
+            "alpha"
+          ],
+          "partial_len": 0,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "sun",
+            "apple",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "apple"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "key",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "key",
+            "dog",
+            "north"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "one",
+            "sun"
+          ],
+          "partial_len": 2,
+          "expected": "sun",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "dog"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "apple",
+            "red",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "apple",
+            "key"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "north",
+            "dog"
+          ],
+          "partial_len": 2,
+          "expected": "dog",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "one",
+            "dog",
+            "red"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "north",
+            "apple"
+          ],
+          "partial_len": 1,
+          "expected": "north",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "alpha",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "dog",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "key",
+            "north",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "one"
+          ],
+          "partial_len": 0,
+          "expected": "alpha",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "sun",
+            "one"
+          ],
+          "partial_len": 1,
+          "expected": "sun",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "one"
+          ],
+          "partial_len": 0,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "red",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "apple"
+          ],
+          "partial_len": 1,
+          "expected": "apple",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "dog"
+          ],
+          "partial_len": 0,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "alpha",
+            "sun",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "one",
+            "apple"
+          ],
+          "partial_len": 2,
+          "expected": "apple",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "alpha",
+            "dog",
+            "apple"
+          ],
+          "partial_len": 3,
+          "expected": "apple",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "dog",
+            "apple"
+          ],
+          "partial_len": 2,
+          "expected": "apple",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "apple",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "alpha",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "alpha",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "sun"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "red",
+            "alpha"
+          ],
+          "partial_len": 1,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "dog",
+            "apple"
+          ],
+          "partial_len": 1,
+          "expected": "dog",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "north",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "north",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "sun"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "dog",
+            "sun"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "one",
+            "sun",
+            "dog"
+          ],
+          "partial_len": 0,
+          "expected": "apple",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "dog",
+            "sun",
+            "key"
+          ],
+          "partial_len": 2,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "red"
+          ],
+          "partial_len": 1,
+          "expected": "red",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "north"
+          ],
+          "partial_len": 1,
+          "expected": "north",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "one",
+            "dog",
+            "north"
+          ],
+          "partial_len": 1,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "north",
+            "sun"
+          ],
+          "partial_len": 0,
+          "expected": "one",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "sun",
+            "apple"
+          ],
+          "partial_len": 0,
+          "expected": "sun",
+          "predicted": "and",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "alpha",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "north",
+            "key",
+            "sun"
+          ],
+          "partial_len": 1,
+          "expected": "key",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "apple",
+            "key",
+            "dog"
+          ],
+          "partial_len": 0,
+          "expected": "red",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "north",
+            "alpha",
+            "dog"
+          ],
+          "partial_len": 3,
+          "expected": "dog",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "red",
+            "key"
+          ],
+          "partial_len": 1,
+          "expected": "red",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "red",
+            "north",
+            "dog"
+          ],
+          "partial_len": 2,
+          "expected": "dog",
+          "predicted": "",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "apple",
+            "red"
+          ],
+          "partial_len": 2,
+          "expected": "red",
+          "predicted": ".",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "apple",
+            "red"
+          ],
+          "partial_len": 0,
+          "expected": "apple",
+          "predicted": ",",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "one",
+            "north"
+          ],
+          "partial_len": 0,
+          "expected": "one",
+          "predicted": "the",
+          "correct": false
+        },
+        {
+          "pattern": [
+            "key",
+            "dog"
+          ],
+          "partial_len": 0,
+          "expected": "key",
+          "predicted": "the",
+          "correct": false
+        }
+      ]
+    },
+    "structural_accuracy": {
+      "accuracy": 0.030054644808743168,
+      "by_type": {
+        "content": {
+          "correct": 0,
+          "total": 117,
+          "accuracy": 0.0
+        },
+        "delimiter": {
+          "correct": 2,
+          "total": 182,
+          "accuracy": 0.01098901098901099
+        },
+        "numeric": {
+          "correct": 0,
+          "total": 27,
+          "accuracy": 0.0
+        },
+        "bracket": {
+          "correct": 2,
+          "total": 21,
+          "accuracy": 0.09523809523809523
+        },
+        "spacing": {
+          "correct": 7,
+          "total": 19,
+          "accuracy": 0.3684210526315789
+        }
+      },
+      "total_tokens": 366
+    },
+    "whitespace_prediction": {
+      "space_accuracy": 0.55,
+      "word_accuracy": 0.07,
+      "total": 100,
+      "examples": [
+        {
+          "prefix_last_word": "winding",
+          "expected_next": "road",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "morning",
+          "expected_next": "he",
+          "predicted": "\n",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "river",
+          "expected_next": "near",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "on",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "people",
+          "expected_next": "buying",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "burned",
+          "expected_next": "in",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "sound",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "wire",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "into",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "library",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "quiet",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "quiet",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "buying",
+          "expected_next": "fresh",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "through",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "above",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "burned",
+          "expected_next": "in",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "quiet",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "burned",
+          "expected_next": "in",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "for",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "steadily",
+          "expected_next": "through",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "light",
+          "expected_next": "burned",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "wire",
+          "expected_next": "above",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "and",
+          "expected_next": "into",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "quiet",
+          "expected_next": "except",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "market",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "night",
+          "expected_next": "and",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "library",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "for",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "he",
+          "expected_next": "drinks",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "of",
+          "expected_next": "pages",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "stone",
+          "expected_next": "bridge",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "he",
+          "expected_next": "drinks",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "long",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "winding",
+          "expected_next": "road",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "buying",
+          "expected_next": "fresh",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "market",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "quiet",
+          "expected_next": "except",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "of",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "he",
+          "expected_next": "drinks",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "reads",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "burned",
+          "expected_next": "in",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "built",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "through",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "crossed",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "window",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "house",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "crowded",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "wire",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "bridge",
+          "expected_next": "crossed",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "top",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "overlooking",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "wire",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "people",
+          "expected_next": "buying",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "steadily",
+          "expected_next": "through",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "near",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "burned",
+          "expected_next": "in",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "birds",
+          "expected_next": "gathered",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "overlooking",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "quiet",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "market",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "birds",
+          "expected_next": "gathered",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "drinks",
+          "expected_next": "coffee",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "hill",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "coffee",
+          "expected_next": "and",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "down",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "house",
+          "expected_next": "on",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "jumps",
+          "expected_next": "over",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "jumps",
+          "expected_next": "over",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "crowded",
+          "expected_next": "with",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "crossed",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "long",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "old",
+          "expected_next": "stone",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "was",
+          "expected_next": "quiet",
+          "predicted": " to",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "quiet",
+          "expected_next": "except",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "morning",
+          "expected_next": "he",
+          "predicted": "\n",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "wire",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "reads",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "on",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "single",
+          "expected_next": "light",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "walked",
+          "expected_next": "down",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "gathered",
+          "expected_next": "on",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "and",
+          "expected_next": "reads",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "of",
+          "expected_next": "the",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "toward",
+          "expected_next": "the",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": true
+        },
+        {
+          "prefix_last_word": "gathered",
+          "expected_next": "on",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "birds",
+          "expected_next": "gathered",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "brown",
+          "expected_next": "fox",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "and",
+          "expected_next": "into",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "top",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "walked",
+          "expected_next": "down",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "hill",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "market",
+          "expected_next": "was",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "people",
+          "expected_next": "buying",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "river",
+          "expected_next": "near",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "drinks",
+          "expected_next": "coffee",
+          "predicted": ".",
+          "has_space": false,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "fell",
+          "expected_next": "steadily",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "window",
+          "expected_next": "of",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "the",
+          "expected_next": "river",
+          "predicted": " of",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "steadily",
+          "expected_next": "through",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        },
+        {
+          "prefix_last_word": "winding",
+          "expected_next": "road",
+          "predicted": " the",
+          "has_space": true,
+          "word_correct": false
+        }
+      ]
+    }
+  }
+}

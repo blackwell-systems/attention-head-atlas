@@ -41,17 +41,27 @@ BRACKET_OPEN = {'(': ')', '[': ']', '{': '}'}
 BRACKET_CLOSE = set(')]}\u003e')
 
 
-def load_model(checkpoint_path, tokenizer_path, device):
+def load_model(checkpoint_path, tokenizer_path, device, size="410m"):
     """Load model and tokenizer."""
     tok = Tokenizer.from_file(tokenizer_path)
     vocab_size = tok.get_vocab_size()
 
-    from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
-    config = GPTNeoXConfig(
-        vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
-        num_attention_heads=16, intermediate_size=4096,
-        max_position_embeddings=2048, attn_implementation="eager")
-    model = GPTNeoXForCausalLM(config).to(device)
+    if size == "410m-llama":
+        from transformers import LlamaConfig, LlamaForCausalLM
+        config = LlamaConfig(
+            vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
+            num_attention_heads=16, num_key_value_heads=4,
+            intermediate_size=2816, max_position_embeddings=2048,
+            rope_theta=500000.0, use_cache=False,
+            attn_implementation="eager")
+        model = LlamaForCausalLM(config).to(device)
+    else:
+        from transformers import GPTNeoXConfig, GPTNeoXForCausalLM
+        config = GPTNeoXConfig(
+            vocab_size=vocab_size, hidden_size=1024, num_hidden_layers=24,
+            num_attention_heads=16, intermediate_size=4096,
+            max_position_embeddings=2048, attn_implementation="eager")
+        model = GPTNeoXForCausalLM(config).to(device)
     model.eval()
 
     cp = torch.load(checkpoint_path, map_location=device, weights_only=False)
@@ -390,13 +400,14 @@ def main():
     parser.add_argument("--tokenizer", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--model-name", default="model")
+    parser.add_argument("--size", default="410m", choices=["410m", "410m-llama"])
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     print("Device: %s" % device)
 
-    model, tok = load_model(args.checkpoint, args.tokenizer, device)
+    model, tok = load_model(args.checkpoint, args.tokenizer, device, args.size)
     rng = random.Random(42)
 
     print("\nRunning %d completion tasks" % len(TASKS))
