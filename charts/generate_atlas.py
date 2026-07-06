@@ -43,6 +43,7 @@ RUN_COLORS = {
     'nl-barrier': '#a78bfa',
     'structok-baseline': '#f97316',
     'structok-comparison': '#06b6d4',
+    'llama-fineweb-baseline': '#facc15',
 }
 RUN_LABELS = {
     'baseline': 'Baseline (standard BPE)',
@@ -51,9 +52,10 @@ RUN_LABELS = {
     'nl-barrier': 'NL barriers (. \' ? ! - etc)',
     'structok-baseline': 'Structok corpus (standard BPE)',
     'structok-comparison': 'Structok corpus (struct barriers)',
+    'llama-fineweb-baseline': 'Llama 410M (GQA, standard BPE)',
 }
-# Structok runs were probed with v2 probes from the start (no -v2 suffix)
-STRUCTOK_RUNS = {'structok-baseline', 'structok-comparison'}
+# Runs probed with v2 probes from the start (no -v2 suffix needed)
+NO_V2_SUFFIX_RUNS = {'structok-baseline', 'structok-comparison', 'llama-fineweb-baseline'}
 
 # Theme globals
 BG = 'white'
@@ -108,7 +110,7 @@ USE_V2 = False  # Set by --v2 flag
 def get_run_dir(run, use_excess):
     """Get results directory for a run.
     Structok runs have no -v2 variant (probed with v2 probes from the start)."""
-    if USE_V2 and run not in STRUCTOK_RUNS:
+    if USE_V2 and run not in NO_V2_SUFFIX_RUNS:
         if use_excess:
             return RESULTS_DIR / ('%s-v2-excess' % run)
         return RESULTS_DIR / ('%s-v2' % run)
@@ -163,7 +165,7 @@ def load_timeline(run_dir):
     return steps, type_counts, avg_spec, avg_entropy, np.array(layer_spec)
 
 
-ALL_RUNS = ['baseline', 'comparison', 'seed2', 'nl-barrier', 'structok-baseline', 'structok-comparison']
+ALL_RUNS = ['baseline', 'comparison', 'seed2', 'nl-barrier', 'structok-baseline', 'structok-comparison', 'llama-fineweb-baseline']
 
 
 def get_available_runs(use_excess):
@@ -584,9 +586,10 @@ def chart_ablation_comparison(use_excess=False):
         return
 
     models = []
-    for name, fname in [('FineWeb\nbaseline', 'ablation-baseline.json'),
-                         ('Structok\nbaseline', 'ablation-structok-baseline.json'),
-                         ('Comparison\n(barriers)', 'ablation-comparison.json')]:
+    for name, fname in [('NeoX 410M\nFineWeb', 'ablation-baseline.json'),
+                         ('Llama 410M\nFineWeb', 'ablation-llama-fineweb-410m.json'),
+                         ('NeoX 410M\nStructok', 'ablation-structok-baseline.json'),
+                         ('NeoX 410M\nBarriers', 'ablation-comparison.json')]:
         path = ablation_dir / fname
         if not path.exists():
             continue
@@ -679,32 +682,122 @@ def chart_ablation_per_text(use_excess=False):
 
 def chart_capacity_tax(use_excess=False):
     """Stacked bar showing head allocation: spacing, P0, productive."""
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Baseline
-    ax = axes[0]
-    setup_ax(ax, 'Standard BPE\n(FineWeb baseline)', ylabel='Heads')
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
     categories = ['Spacing\n(damage repair)', 'P0 sinks\n(doing nothing)', 'Productive']
-    counts = [183, 32, 384 - 183 - 32]
     colors_list = ['#ec4899', '#ff4444', '#22c55e']
     edge = GRID if LIGHT else BG
+
+    # NeoX Baseline
+    ax = axes[0]
+    setup_ax(ax, 'NeoX 410M (MHA)\nStandard BPE', ylabel='Heads')
+    counts = [183, 32, 384 - 183 - 32]
     ax.bar(categories, counts, color=colors_list, edgecolor=edge, linewidth=0.5)
     for i, c in enumerate(counts):
         ax.text(i, c + 5, '%d\n(%.0f%%)' % (c, c / 384 * 100), ha='center', fontsize=9, color=TEXT)
     ax.set_ylim(0, 250)
 
-    # Comparison
+    # Llama Baseline
     ax = axes[1]
-    setup_ax(ax, 'Merge Barriers\n(comparison)', ylabel='Heads')
+    setup_ax(ax, 'Llama 410M (GQA)\nStandard BPE', ylabel='Heads')
+    counts = [154, 31, 384 - 154 - 31]
+    ax.bar(categories, counts, color=colors_list, edgecolor=edge, linewidth=0.5)
+    for i, c in enumerate(counts):
+        ax.text(i, c + 5, '%d\n(%.0f%%)' % (c, c / 384 * 100), ha='center', fontsize=9, color=TEXT)
+    ax.set_ylim(0, 250)
+
+    # Comparison (merge barriers)
+    ax = axes[2]
+    setup_ax(ax, 'NeoX 410M (MHA)\nMerge Barriers', ylabel='Heads')
     counts = [13, 40, 384 - 13 - 40]
     ax.bar(categories, counts, color=colors_list, edgecolor=edge, linewidth=0.5)
     for i, c in enumerate(counts):
         ax.text(i, c + 5, '%d\n(%.0f%%)' % (c, c / 384 * 100), ha='center', fontsize=9, color=TEXT)
     ax.set_ylim(0, 400)
 
-    fig.suptitle('The Capacity Tax: 56% of Standard BPE Heads Are Non-Productive',
+    fig.suptitle('The Capacity Tax Across Architectures',
                 fontsize=13, fontweight='bold', color=TEXT)
     save(fig, 'capacity-tax')
+
+
+def chart_cross_architecture_emergence(use_excess=False):
+    """Side-by-side spacing/P0/delimiter emergence curves for NeoX vs Llama."""
+    label = 'excess' if use_excess else 'raw'
+    neox_dir = get_run_dir('baseline', use_excess)
+    llama_dir = get_run_dir('llama-fineweb-baseline', use_excess)
+
+    if not neox_dir.exists() or not llama_dir.exists():
+        return
+
+    n_steps, n_tc, _, _, _ = load_timeline(neox_dir)
+    l_steps, l_tc, _, _, _ = load_timeline(llama_dir)
+
+    behaviors_to_plot = ['spacing', 'positional_p0', 'delimiter', 'positional_prev']
+    behavior_labels = {
+        'spacing': 'Spacing',
+        'positional_p0': 'P0 sinks',
+        'delimiter': 'Delimiter',
+        'positional_prev': 'Positional (prev)',
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    axes = axes.flatten()
+
+    for ax, b in zip(axes, behaviors_to_plot):
+        setup_ax(ax, behavior_labels[b], xlabel='Training step', ylabel='Head count')
+        ax.plot(n_steps, n_tc[b], color=RUN_COLORS['baseline'], linewidth=2,
+                label='NeoX 410M (MHA)')
+        ax.plot(l_steps, l_tc[b], color=RUN_COLORS['llama-fineweb-baseline'], linewidth=2,
+                label='Llama 410M (GQA)')
+        ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    fig.suptitle('Cross-Architecture Embryology: NeoX vs Llama (%s scores)\n'
+                 'Same corpus, same tokenizer, different architectures' % label,
+                fontsize=13, fontweight='bold', color=TEXT)
+    save(fig, 'cross-architecture-emergence-%s' % label)
+
+
+def chart_ablation_cross_architecture(use_excess=False):
+    """Side-by-side per-text ablation for NeoX vs Llama."""
+    neox_path = RESULTS_DIR / 'ablation' / 'ablation-baseline.json'
+    llama_path = RESULTS_DIR / 'ablation' / 'ablation-llama-fineweb-410m.json'
+
+    if not neox_path.exists() or not llama_path.exists():
+        return
+
+    with open(neox_path) as f:
+        neox = json.load(f)
+    with open(llama_path) as f:
+        llama = json.load(f)
+
+    texts = sorted(neox['baseline']['per_text'].keys())
+    neox_deltas = []
+    llama_deltas = []
+    for t in texts:
+        nb = neox['baseline']['per_text'][t]
+        ns = neox['spacing_ablation']['per_text'][t]
+        neox_deltas.append((ns - nb) / nb * 100)
+        lb = llama['baseline']['per_text'][t]
+        ls = llama['spacing_ablation']['per_text'].get(t, lb)
+        llama_deltas.append((ls - lb) / lb * 100)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    setup_ax(ax, 'Spacing Ablation: Per-Text Degradation Across Architectures\n'
+             'NeoX (183 heads removed) vs Llama (154 heads removed)',
+             xlabel='PPL change (%)')
+
+    x = np.arange(len(texts))
+    width = 0.35
+    edge = GRID if LIGHT else BG
+    ax.barh(x - width/2, neox_deltas, width, label='NeoX 410M (MHA)',
+            color=RUN_COLORS['baseline'], edgecolor=edge, linewidth=0.5)
+    ax.barh(x + width/2, llama_deltas, width, label='Llama 410M (GQA)',
+            color=RUN_COLORS['llama-fineweb-baseline'], edgecolor=edge, linewidth=0.5)
+
+    ax.set_yticks(x)
+    ax.set_yticklabels(texts, fontsize=10)
+    ax.legend(fontsize=9, facecolor=LEGEND_BG, edgecolor=GRID, labelcolor=TEXT)
+
+    save(fig, 'ablation-cross-architecture')
 
 
 ALL_CHARTS = [
@@ -720,6 +813,8 @@ ALL_CHARTS = [
     chart_ablation_comparison,
     chart_ablation_per_text,
     chart_capacity_tax,
+    chart_cross_architecture_emergence,
+    chart_ablation_cross_architecture,
 ]
 
 STANDALONE_CHARTS = [

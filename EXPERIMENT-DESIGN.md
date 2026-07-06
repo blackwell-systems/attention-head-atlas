@@ -109,6 +109,7 @@ atlas/
 - Structok corpus (2 runs): ~$7.00 (completed, training + probing across 4 instances)
 - Ablation study (3 models): ~$0.30 (completed, inference only)
 - UMAP extraction (2 models): ~$0.10 (completed, inference only)
+- Llama developmental atlas (training + probing + ablation): ~$3.40 (in progress)
 
 ## Status (2026-07-04)
 
@@ -412,11 +413,124 @@ If the comparison model wins on structural tasks with no regression on prose, th
 
 Inference only. Can run on any GPU instance or locally on CPU (slower). No training needed. The checkpoints are on HuggingFace.
 
-### Remaining: Llama Ablation
+### Remaining: Llama Developmental Atlas (Llama-FineWeb-Baseline)
 
-Run zero-ablation on Llama 410M and 1.3B to confirm spacing heads are mandatory damage repair on GQA, not just MHA. The checkpoints are already probed. Requires adapting `ablate_spacing_heads.py` for Llama architecture (GQA complication: zeroing a query head leaves 3 siblings sharing the same KV projection). May need KV-group ablation as in the coupling paper.
+Full 131-checkpoint developmental analysis of Llama 410M trained on FineWeb. This is the architecture replication of the NeoX developmental atlas: not just "spacing exists in Llama" but "spacing follows the same developmental program across architectures."
 
-**Cost:** ~$0.30 (inference only).
+#### Purpose
+
+The NeoX atlas has developmental trajectories for 4 runs (baseline, comparison, seed2, NL-barrier) plus 2 structok corpus runs. All are MHA. Adding the Llama developmental trajectory answers:
+
+1. **When do spacing heads emerge in GQA?** Same training step as MHA, or earlier/later?
+2. **Does GQA change the emergence dynamics?** With 4 KV heads shared across 16 query heads, do spacing heads cluster within KV groups or distribute evenly?
+3. **Does the spacing fin appear in Llama UMAP?** Wang et al.'s spacing fin was observed on MHA. Does it manifest differently with GQA?
+4. **Is the P0 surge simultaneous across architectures?** NeoX P0 emerges around step 200-400. Same in Llama?
+
+#### Training
+
+Currently running (2026-07-05). Llama 410M on FineWeb with standard-64k tokenizer.
+
+| Parameter | Value |
+|-----------|-------|
+| Architecture | Llama 410M (24 layers, 16 heads, 4 KV heads, hidden=1024, intermediate=2816) |
+| Tokenizer | standard-64k.json (same as NeoX baseline) |
+| Corpus | FineWeb 5GB (same bin as NeoX baseline: `atlas/tokens/atlas-standard-64k.bin`) |
+| Steps | 20,000 |
+| Batch size | 1 |
+| Learning rate | 3e-4 flat |
+| Context length | 2,048 |
+| Precision | bf16 |
+| Checkpoint schedule | 131 checkpoints (same as NeoX) |
+| R2 prefix | `atlas/runs/llama-fineweb-baseline` |
+| Instance | ssh4.vast.ai:15912, RTX 4090, $0.46/hr |
+
+Training command:
+```
+python3 train_atlas.py --tokenizer standard-64k.json --data atlas-standard-64k.bin \
+  --run-name llama-fineweb-baseline --r2-prefix atlas/runs/llama-fineweb-baseline \
+  --output-dir /root/runs/llama-fineweb-baseline --arch llama --steps 20000
+```
+
+#### Probing (after training)
+
+Probe all 131 checkpoints with 7-behavior taxonomy on same instance:
+```
+python3 probe_heads.py --r2-prefix atlas/runs/llama-fineweb-baseline \
+  --tokenizer standard-64k.json --probe-dir probes/ --size 410m-llama \
+  --save-local results/llama-fineweb-baseline/
+```
+
+This will take ~2-3 hours on a single 4090 (131 checkpoints, each requires model load + 7 probe texts).
+
+#### Excess correction
+
+Generate step-0 base rates from the step-00000 checkpoint (random Llama init), then:
+```
+python3 excess_score_correction.py --run llama-fineweb-baseline
+```
+
+Auto-detects 384 heads (16 per layer x 24 layers) from the raw data.
+
+#### Ablation (after probing)
+
+Zero-ablation on step-20000 checkpoint using the excess-corrected classifications:
+```
+python3 ablate_spacing_heads.py --checkpoint step-20000.pt \
+  --tokenizer standard-64k.json \
+  --classifications results/llama-fineweb-baseline-excess/step-20000.json \
+  --size 410m-llama --probe-dir probes/
+```
+
+Uses Llama-specific zeroing: `model.layers.{layer}.self_attn.o_proj` (already implemented in ablate_spacing_heads.py).
+
+#### Charts (after excess correction)
+
+Generate developmental charts comparable to NeoX:
+- Behavior emergence timeline (when does each behavior first appear?)
+- Head count trajectories (spacing, P0, delimiter, positional_prev over 131 steps)
+- Specialization index distribution over training
+- UMAP: head-level joint embedding with NeoX baseline for direct comparison
+- UMAP: developmental sequence (8 training steps) showing spacing emergence in GQA
+
+#### Predictions
+
+| Metric | NeoX baseline | Llama predicted | Rationale |
+|--------|--------------|----------------|-----------|
+| Spacing emergence step | ~200-400 | ~200-600 | GQA may delay or accelerate |
+| Final spacing count | 183 (47.7%) | 50-80 (~15%) | Consistent with endpoint probe (60 heads) |
+| Final P0 count | 32 (8.3%) | 80-100 (~23%) | Consistent with endpoint probe (90 heads) |
+| Spacing + P0 total | ~56% | ~39% | Architecture-dependent but still massive |
+| Ablation: spacing removal | +64.3% PPL | +20-60% PPL | Mandatory damage repair on GQA too |
+| Ablation: P0 removal | +1.4% PPL | ~0-5% PPL | P0 useless on both architectures |
+| Ablation: random control | +28.7% PPL | +15-30% PPL | Capacity reduction baseline |
+
+#### R2 storage
+
+```
+atlas/runs/llama-fineweb-baseline/
+  checkpoints/step-00000.pt through step-20000.pt    # 131 checkpoints
+atlas/results/llama-fineweb-baseline/
+  step-00000.json through step-20000.json             # 131 probe results
+```
+
+Results locally in `results/llama-fineweb-baseline/` and `results/llama-fineweb-baseline-excess/`.
+
+#### Cost
+
+- Training: ~$2.30 (5 hours on RTX 4090 at $0.46/hr)
+- Probing: ~$1.00 (2-3 hours on same instance)
+- Ablation: ~$0.10 (inference only, single checkpoint)
+- Total: ~$3.40
+
+#### Why this matters
+
+Without developmental data, the Llama finding is a single data point: "spacing exists at endpoint." With 131 checkpoints, we can show spacing follows a developmental program that is conserved across architectures, even though GQA changes the quantitative distribution. This is the difference between "we measured it" and "we understand it."
+
+### Remaining: Llama Ablation (clean, FineWeb-trained)
+
+The Llama ablation from run-003/004 checkpoints was INCONCLUSIVE because those models were trained on structok corpus but probed on FineWeb texts (distribution mismatch, baseline PPL 150K-314K). The llama-fineweb-baseline run fixes this: same corpus as NeoX baseline, clean ablation comparison.
+
+**Cost:** Included in Llama Developmental Atlas above (ablation runs on the same step-20000 checkpoint).
 
 ### 3. Downstream task impact
 

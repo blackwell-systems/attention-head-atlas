@@ -1,0 +1,40 @@
+{
+  "baseline": {
+    "mean": 11663.0,
+    "per_text": {
+      "prose": 2366.2,
+      "code": 22863.2,
+      "structured": 3292.6,
+      "induction": 462.2,
+      "duplicates": 15365.1,
+      "brackets": 35699.0,
+      "prose_punctuated": 1592.5
+    }
+  },
+  "spacing_ablation": {
+    "heads": 154,
+    "mean": 19475.4,
+    "delta_pct": 67.0,
+    "per_text": {
+      "prose": 2441.2,
+      "code": 36649.9,
+      "structured": 4762.6,
+      "induction": 815.3,
+      "duplicates": 38125.8,
+      "brackets": 51668.0,
+      "prose_punctuated": 1865.3
+    }
+  },
+  "p0_ablation": {
+    "heads": 31,
+    "mean": 11268.0,
+    "delta_pct": -3.4,
+    "per_text": {}
+  },
+  "random_controls": {
+    "n_trials": 5,
+    "heads_per_trial": 154,
+    "deltas_pct": [33.6, 116.6, 106.0, 39.3, 81.4],
+    "mean_delta_pct": 75.4
+  }
+}

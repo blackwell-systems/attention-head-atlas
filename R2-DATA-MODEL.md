@@ -36,7 +36,10 @@ atlas/
 │   ├── structok-baseline/checkpoints/         # Structok corpus, standard BPE
 │   │   └── step-00000.pt ... step-20000.pt
 │   │
-│   └── structok-comparison/checkpoints/       # Structok corpus, merge-barrier tokenizer
+│   ├── structok-comparison/checkpoints/       # Structok corpus, merge-barrier tokenizer
+│   │   └── step-00000.pt ... step-20000.pt
+│   │
+│   └── llama-fineweb-baseline/checkpoints/    # FineWeb, standard BPE, Llama 410M (GQA)
 │       └── step-00000.pt ... step-20000.pt
 │
 └── results/                                   # Probe results (1 JSON per checkpoint per run)
@@ -58,8 +61,10 @@ atlas/
     │   └── ...
     ├── structok-baseline/                     # Structok corpus (probed with v2 probes from the start)
     │   └── step-00000.json ... step-20000.json
-    └── structok-comparison/                   # Structok corpus
-        └── ...
+    ├── structok-comparison/                   # Structok corpus
+    │   └── ...
+    └── llama-fineweb-baseline/               # Llama 410M GQA embryology (7 behaviors)
+        └── step-00000.json ... step-20000.json
 ```
 
 The structok corpus pretokenized bins are stored outside the atlas prefix:
@@ -72,10 +77,10 @@ Provenance: created by `structok/prep_run002.py` for the merge-barriers paper (r
 
 ## File Sizes
 
-| Type | Per file | Per run (131 files) | Total (6 runs) |
+| Type | Per file | Per run (131 files) | Total (7 runs) |
 |------|----------|---------------------|----------------|
-| Checkpoint (.pt) | ~1.7 GB | ~223 GB | ~1,338 GB |
-| Probe result (.json) | ~800 KB | ~105 MB | ~1,050 MB |
+| Checkpoint (.pt) | ~1.6-1.7 GB | ~210-223 GB | ~1,548 GB |
+| Probe result (.json) | ~800 KB | ~105 MB | ~1,155 MB |
 | Pretokenized bin (FineWeb) | ~2.4 GB | 1 per tokenizer | ~7.4 GB (3 tokenizers) |
 | Pretokenized bin (structok) | ~4.8 GB | 1 per tokenizer | ~9.6 GB (2 tokenizers) |
 | Tokenizer JSON | ~4 MB | 1 per tokenizer | ~12 MB |
@@ -90,7 +95,7 @@ Provenance: created by `structok/prep_run002.py` for the merge-barriers paper (r
 - **Tokens (structok)**: `tokens/{tokenizer-name}-v2.bin` (outside atlas prefix)
 - **Tokenizers**: `atlas/tokens/{tokenizer-name}.json`
 
-Run names: `baseline`, `comparison`, `seed2`, `nl-barrier`, `structok-baseline`, `structok-comparison`
+Run names: `baseline`, `comparison`, `seed2`, `nl-barrier`, `structok-baseline`, `structok-comparison`, `llama-fineweb-baseline`
 
 ## v1 vs v2 Probe Data
 
@@ -99,6 +104,8 @@ Run names: `baseline`, `comparison`, `seed2`, `nl-barrier`, `structok-baseline`,
 **v2**: 7 behavior types (adds spacing). All 4 FineWeb runs re-probed with identical improved probe texts on a single RTX 4090. Results in `atlas/results/{run}-v2/`. v1 data preserved.
 
 **Structok**: Probed with v2 probes from the start (no separate v1). Results in `atlas/results/structok-{baseline|comparison}/`.
+
+**Llama**: Probed with v2 probes (7 behaviors). Results in `atlas/results/llama-fineweb-baseline/`. Same probe texts and classification logic as NeoX v2 runs.
 
 ## Non-Clobbering
 
@@ -114,6 +121,10 @@ Each `.pt` file contains:
     "loss": float,                  # Training loss at this step (NaN for step 0)
 }
 ```
+
+## Architecture Notes
+
+The first 6 runs use GPT-NeoX 410M (MHA, 24 layers, 16 heads, 384 total). The `llama-fineweb-baseline` run uses Llama 410M (GQA, 24 layers, 16 query heads, 4 KV heads, 384 total). Checkpoint size is ~1.6 GB for Llama vs ~1.7 GB for NeoX (smaller intermediate_size: 2816 vs 4096). Probe results have the same schema; the `--size 410m-llama` flag tells `probe_heads.py` to load the correct architecture.
 
 ## Probe Result Contents
 
