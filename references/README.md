@@ -88,6 +88,12 @@ For someone entering this field from the experimental side:
 | litetoken-2026-merge-residues.pdf | LiteToken: Removing Intermediate Merge Residues from BPE | 2026 |
 | lian-2024-scaffold-bpe.pdf | Scaffold-BPE: Enhancing BPE with Scaffold Token Removal (AAAI 2025) | 2024 |
 | meta-2024-byte-latent-transformer.pdf | Byte Latent Transformer: Patches Scale Better Than Tokens | 2024 |
+| liu-2025-superbpe.pdf | SuperBPE: Space Travel for Language Models (COLM 2025) | 2025 |
+| land-2025-bpe-script.pdf | BPE Stays on SCRIPT: Structured Encoding for Multilingual Pretokenization (ICML 2025 Best Paper) | 2025 |
+| chizhov-2026-source-attributed-bpe.pdf | From Where Words Come: Efficient Regularization of Code Tokenizers Through Source Attribution | 2026 |
+| karim-2025-structured-data-tokenisation.pdf | Innovative Tokenisation of Structured Data for LLM Training | 2025 |
+| kutschka-2026-notation-matters.pdf | Notation Matters: A Benchmark Study of Token-Optimized Formats in Agentic AI Systems | 2026 |
+| ayoobi-2026-tokenizer-betrays-reasoning.pdf | Say Anything but This: When Tokenizer Betrays Reasoning in LLMs | 2026 |
 
 ## Head Specialization at Scale
 
@@ -95,6 +101,7 @@ For someone entering this field from the experimental side:
 |------|-------|------|
 | zheng-2024-attention-heads-survey.pdf | Attention Heads of Large Language Models: A Survey (Patterns 2025) | 2024 |
 | schallon-2026-collapsed-heads-alibi.pdf | Surgical Repair of Collapsed Attention Heads in ALiBi Transformers | 2026 |
+| kaplan-2025-from-tokens-to-words.pdf | From Tokens to Words: On the Inner Lexicon of LLMs (ICLR 2025) | 2025 |
 
 ## Training Dynamics and Circuit Formation
 
@@ -106,7 +113,8 @@ For someone entering this field from the experimental side:
 | odonnat-2024-mechanistic-training-dynamics.pdf | A Mechanistic Study of Transformers Training Dynamics | 2024 |
 | bayazit-2025-crosscoding-through-time.pdf | Crosscoding Through Time: Tracking Feature Emergence | 2025 |
 | ge-2025-concept-evolution-pretraining.pdf | Evolution of Concepts in Language Model Pre-Training (ICLR 2026) | 2025 |
+| jain-2026-retokenization-symmetry.pdf | Emergent Retokenization Symmetry in Large Language Models | 2026 |
 
 ## Note
 
-49 papers total. PDFs are gitignored. This README is committed; the papers are local only.
+57 papers total. PDFs are gitignored. This README is committed; the papers are local only.
