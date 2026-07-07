@@ -188,3 +188,15 @@ Excess-corrected results are stored locally in the repo under `results/{run}-exc
 ## Relationship to structok R2 Data
 
 The atlas data coexists with the merge-barriers training data in the same `structok-training` bucket. The `atlas/` prefix separates atlas data from the main experiment data stored under `checkpoints/`, `tokens/`, `logs/`, `archive/`, `corpus/`, etc. The structok corpus pretokenized bins are at `tokens/standard-64k-v2.bin` and `tokens/structok-64k-v2.bin` (outside the atlas prefix, shared with the merge-barriers experiments).
+
+## R2 Buckets
+
+Three buckets exist on the same R2 account:
+
+| Bucket | Contents | Objects | Size |
+|--------|----------|---------|------|
+| `structok-training` | All production data: atlas runs, coupling paper runs, tokenizers, corpora, results, ablation, benchmarks | ~2,718 | ~2.1 TB |
+| `structok` | Legacy bucket from run-001 (proof of concept). Contains early checkpoints, logs, and tokens | 7 | ~10.8 GB |
+| `claude-sync` | Unrelated to research program | -- | -- |
+
+All scripts reference `structok-training`. The `structok` bucket is preserved for provenance but not actively used. Run-001 data in `structok` predates the controlled experiments and is not referenced by any published paper.
