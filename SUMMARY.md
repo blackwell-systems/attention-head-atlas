@@ -217,6 +217,8 @@ The gap between the severity of the problem (48-56% of heads, every model, every
 
 ## Bottom line
 
+This is the culmination of a three-paper research program on tokenizer-attention coupling: how BPE merge decisions made during tokenizer training permanently shape which attention heads develop, which heads fail, and how much capacity remains for productive work. Paper 1 established the mechanism and the fix across three domains. Paper 2 proved the damage is universal and permanent. Paper 3 discovered the scale of the damage, proved it is architecture-independent, unified the findings into a two-regime model, and validated with downstream benchmarks.
+
 Standard BPE tokenization is the single largest source of attention capacity waste in transformer language models. It forces 40-48% of heads into whitespace boundary recovery and collapses another ~8% into useless sinks, leaving as few as 44% for productive work. This is not a hypothesis; it is measured across 18 training runs, two architectures, two scales, three domains, and 917 developmental checkpoints, with causal ablation producing essentially identical degradation on both multi-head attention (+64.3%) and grouped query attention (+67.0%).
 
 The fix is 16 lines of tokenizer configuration. No architecture changes. No additional compute. No natural language regression. Models trained with merge barriers develop zero spacing heads, 3-4x more structural specialists, and measurably better downstream prediction accuracy.
