@@ -207,7 +207,7 @@ The gap between the severity of the problem (48-56% of heads, every model, every
 | Atlas probe results | 1,572 |
 | Ablation models | 6 |
 | Downstream benchmark models | 3 |
-| Activation patching experiments | 11,400 |
+| Activation patching experiments | 13,800 |
 | Papers | 3 |
 | Findings (atlas) | 18 |
 | References (atlas) | 19 |
