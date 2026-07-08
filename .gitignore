@@ -1,5 +1,6 @@
 # Reference PDFs (local only, not for public distribution)
 references/*.pdf
+references/**/*.pdf
 
 # Internal planning docs
 OUTREACH.md
