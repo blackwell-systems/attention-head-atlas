@@ -681,11 +681,52 @@ All 95 unclassified heads and all 20 control heads showed near-zero patching eff
 
 **Cost:** ~$0.10, ~12 minutes on RTX 4090. Script: `eval/patch_unclassified_heads.py`. Results: `results/patching/patching-comparison.json`.
 
+### Planned: LLC Phase-Transition Correlation (bridge to Timaeus / SLT)
+
+The strongest link between this program and the Timaeus developmental-interpretability work (Wang, Hoogland, Murfet). We measure development from attention patterns (behavioral); singular learning theory measures it from loss-landscape geometry via the Local Learning Coefficient (LLC, the RLCT lambda). These are orthogonal methods. If the spacing-head emergence we found behaviorally is a genuine developmental stage, it should also appear as a phase transition in the LLC trajectory.
+
+#### Hypothesis
+
+The spacing-head emergence (behaviorally: ~28 heads by step 50, 184 by step 150, stabilized by step 2,000) coincides with a phase transition in the LLC. And the merge-barrier model, which never builds spacing heads, should show a *different* LLC trajectory: a missing or shifted transition where the spacing stage would otherwise be.
+
+If confirmed, this connects our empirical finding to SLT machinery in Timaeus's own language, on our own data. Nobody has connected the BPE spacing tax to the learning coefficient.
+
+#### Method
+
+`devinterp` (the Timaeus Python library, `pip install devinterp`) estimates the LLC at a checkpoint via SGLD sampling: for each of N chains, take D draws, each draw a forward+backward pass on a batch. One lambda per checkpoint. Plotting lambda(t) across training reveals phase transitions as jumps/plateaus (Hoogland et al. 2024 showed induction heads emerge at an LLC transition; Furman & Lau give the at-scale estimation method).
+
+#### Protocol
+
+1. **Calibration first (do NOT skip).** Start from the devinterp defaults and the Furman & Lau scaling rules for a 410M model. Run their diagnostic recipe (trace plots, chain-convergence checks) on a handful of checkpoints until the estimate is stable. This is the step that requires understanding the SGLD internals; the paper provides the recipe for what "converged" looks like. Budget 1-2 GPU hours.
+2. **Coarse sweep, one run.** ~25 checkpoints across the baseline trajectory (denser in the early window step 0-500 where differentiation happens). Produces a lambda(t) curve. Check whether a transition appears near the behavioral spacing emergence (step 50-150).
+3. **Decision gate.** If a transition shows up, densify and add the merge-barrier (comparison) run. If nothing shows, stop; you've spent ~$5 instead of ~$30 to learn the spacing stage is not visible in the LLC at this scale.
+4. **Full comparison.** Baseline vs comparison lambda(t). The key result: does the barrier model lack the transition the baseline has?
+
+#### Cost
+
+Per checkpoint: ~5-15 min on a 4090/A100 (depends on chains x draws). Estimates:
+
+| Scope | Checkpoints | GPU time | Cost |
+|-------|------------|----------|------|
+| Calibration | ~5 (repeated) | 1-2 hrs | $1-2 |
+| Coarse sweep, one run | ~25 | 2-6 hrs | $1-3 |
+| Coarse, both runs | ~50 | 5-12 hrs | $3-8 |
+| Full dense, both runs | 262 | 22-65 hrs | $10-30 |
+
+Recommended: spend ~$5 on calibration + one coarse run to find out if it works before committing to the full sweep. Furman & Lau's paper and the devinterp defaults substantially cut the calibration cost (start from their settings, verify on our model, adjust if the diagnostic fails), turning a blind multi-hour search into 1-2 hours of guided verification.
+
+#### Why this matters
+
+This is the only planned experiment that puts our empirical results and Timaeus's theory on the same graph. It is written in their language (LLC), on our data (917 checkpoints). It is also the natural on-ramp to learning singular learning theory hands-on: run the tool on data we already understand, let a surprising result motivate opening the box. Bridge-paper potential with the Timaeus group.
+
+Reference: Hoogland et al. (2024) "The Developmental Landscape of In-Context Learning"; Furman & Lau (2024) "Estimating the Local Learning Coefficient at Scale"; Wang et al. (2025a) rLLC. All in `references/`.
+
 ### Priority order
 
-1. **Scale replication (1.3B or larger)**: highest value for addressing the remaining limitation, moderate cost. Could also enable patching re-run with stronger linguistic signal.
-2. **SAE analysis of unclassified heads**: decompose the 95 heads without behavioral hypotheses.
-3. **Circuit causality (regularization intervention)**: highest engineering effort, standalone contribution to interpretability.
+1. **LLC phase-transition correlation (calibration + coarse sweep first, ~$5)**: the bridge to Timaeus/SLT. Highest strategic value (connects our work to their theory and community). Start small: prove the transition is visible before the full sweep.
+2. **Scale replication (1.3B or larger)**: highest value for addressing the remaining limitation, moderate cost. Could also enable patching re-run with stronger linguistic signal.
+3. **SAE analysis of unclassified heads**: decompose the 95 heads without behavioral hypotheses.
+4. **Circuit causality (regularization intervention)**: highest engineering effort, standalone contribution to interpretability.
 
 ## Relationship to Prior Work
 
